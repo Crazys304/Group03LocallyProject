@@ -1,9 +1,11 @@
 package com.example.localliy
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -17,10 +19,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import com.example.localliy.ui.components.LocalliyBottomNavBar
 import com.example.localliy.ui.components.NavDestination
+import com.example.localliy.ui.screens.HomeScreen
 import com.example.localliy.ui.theme.LocalliyTheme
 
 class MainActivity : ComponentActivity() {
@@ -38,10 +42,11 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainAppScreen() {
     var selectedDestination by remember { mutableStateOf(NavDestination.HOME) }
+    val context = LocalContext.current
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = Color(0xFF0F1215),
+        containerColor = Color(0xFF0D1013),
         bottomBar = {
             LocalliyBottomNavBar(
                 selectedDestination = selectedDestination,
@@ -54,15 +59,40 @@ fun MainAppScreen() {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding),
-            contentAlignment = Alignment.Center
+                .padding(innerPadding)
         ) {
-            Text(
-                text = "${selectedDestination.title} Screen",
-                color = Color.White,
-                fontSize = 24.sp
-            )
+            when (selectedDestination) {
+                NavDestination.HOME -> {
+                    HomeScreen(
+                        onItemClick = { clickedItemName ->
+                            Toast.makeText(context, "Clicked: $clickedItemName", Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                }
+                NavDestination.LIBRARY -> {
+                    SimplePlaceholderScreen(title = "Library Screen")
+                }
+                NavDestination.SETTINGS -> {
+                    SimplePlaceholderScreen(title = "Settings Screen")
+                }
+            }
         }
+    }
+}
+
+@Composable
+fun SimplePlaceholderScreen(title: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF0D1013)),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = title,
+            color = Color.White,
+            fontSize = 22.sp
+        )
     }
 }
 
