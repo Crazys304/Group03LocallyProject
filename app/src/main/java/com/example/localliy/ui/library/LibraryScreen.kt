@@ -2,6 +2,7 @@ package com.example.localliy.ui.library
 
 import android.Manifest
 import android.os.Build
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -83,6 +84,26 @@ fun LibraryScreen(
 
     // Detect if music-to-playlist selection screen is active
     val isMusicToPlaylistSelectionOpen = addingSongsToPlaylist != null || targetSongForPlaylist != null || targetMultipleSongsForPlaylist != null
+
+    // Layer 3 Back Handler: Close selection screens/dialogs without saving
+    BackHandler(enabled = isMusicToPlaylistSelectionOpen || showCreateOrEditPlaylistDialog || showSortDialog) {
+        addingSongsToPlaylist = null
+        targetSongForPlaylist = null
+        targetMultipleSongsForPlaylist = null
+        showCreateOrEditPlaylistDialog = false
+        showSortDialog = false
+    }
+
+    // Layer 2 Back Handler: Close playlist/album/artist detail view back to main library
+    BackHandler(enabled = activeDetail != null && !isMusicToPlaylistSelectionOpen && !showCreateOrEditPlaylistDialog && !showSortDialog) {
+        activeDetail = null
+    }
+
+    // Layer 1 Back Handler: Close active search bar
+    BackHandler(enabled = isSearchActive && activeDetail == null && !isMusicToPlaylistSelectionOpen && !showCreateOrEditPlaylistDialog && !showSortDialog) {
+        isSearchActive = false
+        searchQuery = ""
+    }
 
     LaunchedEffect(isMusicToPlaylistSelectionOpen) {
         onBottomBarVisibilityChanged(!isMusicToPlaylistSelectionOpen)
