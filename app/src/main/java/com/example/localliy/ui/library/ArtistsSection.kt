@@ -19,13 +19,20 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.PlaylistAdd
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,6 +47,8 @@ import com.example.localliy.data.model.Artist
 fun ArtistsSection(
     artists: List<Artist>,
     onArtistClick: (Artist) -> Unit,
+    onPlayArtistSongs: (Artist) -> Unit,
+    onAddArtistToPlaylist: (Artist) -> Unit,
     modifier: Modifier = Modifier
 ) {
     if (artists.isEmpty()) {
@@ -66,7 +75,9 @@ fun ArtistsSection(
         items(artists, key = { it.name }) { artist ->
             ArtistItemCard(
                 artist = artist,
-                onClick = { onArtistClick(artist) }
+                onClick = { onArtistClick(artist) },
+                onPlay = { onPlayArtistSongs(artist) },
+                onAddToPlaylist = { onAddArtistToPlaylist(artist) }
             )
         }
     }
@@ -75,9 +86,12 @@ fun ArtistsSection(
 @Composable
 fun ArtistItemCard(
     artist: Artist,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onPlay: () -> Unit,
+    onAddToPlaylist: () -> Unit
 ) {
     val cardShape = RoundedCornerShape(16.dp)
+    var isMenuExpanded by remember { mutableStateOf(false) }
 
     Row(
         modifier = Modifier
@@ -128,13 +142,40 @@ fun ArtistItemCard(
             )
         }
 
-        IconButton(onClick = onClick) {
-            Icon(
-                imageVector = Icons.Default.MoreVert,
-                contentDescription = "Options",
-                tint = Color(0xFF9CA3AF),
-                modifier = Modifier.size(20.dp)
-            )
+        Box {
+            IconButton(onClick = { isMenuExpanded = true }) {
+                Icon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = "Options",
+                    tint = Color(0xFF9CA3AF),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            DropdownMenu(
+                expanded = isMenuExpanded,
+                onDismissRequest = { isMenuExpanded = false },
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFF1E242C))
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Play Artist Songs", color = Color.White) },
+                    leadingIcon = { Icon(Icons.Default.PlayArrow, contentDescription = null, tint = ActiveGreen) },
+                    onClick = {
+                        isMenuExpanded = false
+                        onPlay()
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Add Artist Songs to Playlist", color = Color.White) },
+                    leadingIcon = { Icon(Icons.Default.PlaylistAdd, contentDescription = null, tint = ActiveGreen) },
+                    onClick = {
+                        isMenuExpanded = false
+                        onAddToPlaylist()
+                    }
+                )
+            }
         }
     }
 }

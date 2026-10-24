@@ -17,15 +17,24 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,6 +53,8 @@ fun SongsSection(
     onOpenSortDialog: () -> Unit,
     onSongClick: (Song) -> Unit,
     onToggleLike: (Song) -> Unit,
+    onAddToPlaylist: (Song) -> Unit,
+    onDeleteSong: (Song) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
@@ -95,9 +106,9 @@ fun SongsSection(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "No songs found",
+                    text = "No songs scanned from device storage yet.",
                     color = Color(0xFF9CA3AF),
-                    fontSize = 16.sp
+                    fontSize = 15.sp
                 )
             }
             return
@@ -111,7 +122,9 @@ fun SongsSection(
                 SongItemCard(
                     song = song,
                     onClick = { onSongClick(song) },
-                    onToggleLike = { onToggleLike(song) }
+                    onToggleLike = { onToggleLike(song) },
+                    onAddToPlaylist = { onAddToPlaylist(song) },
+                    onDeleteSong = { onDeleteSong(song) }
                 )
             }
         }
@@ -122,9 +135,12 @@ fun SongsSection(
 fun SongItemCard(
     song: Song,
     onClick: () -> Unit,
-    onToggleLike: () -> Unit
+    onToggleLike: () -> Unit,
+    onAddToPlaylist: () -> Unit,
+    onDeleteSong: () -> Unit
 ) {
     val cardShape = RoundedCornerShape(14.dp)
+    var isMenuExpanded by remember { mutableStateOf(false) }
 
     Row(
         modifier = Modifier
@@ -180,7 +196,7 @@ fun SongItemCard(
             text = song.formattedDuration,
             color = Color(0xFF6B7280),
             fontSize = 12.sp,
-            modifier = Modifier.padding(horizontal = 6.dp)
+            modifier = Modifier.padding(horizontal = 4.dp)
         )
 
         // Like Button
@@ -196,17 +212,66 @@ fun SongItemCard(
             )
         }
 
-        // Options Button
-        IconButton(
-            onClick = onClick,
-            modifier = Modifier.size(36.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.MoreVert,
-                contentDescription = "More",
-                tint = Color(0xFF9CA3AF),
-                modifier = Modifier.size(20.dp)
-            )
+        // Options 3-Dots Menu
+        Box {
+            IconButton(
+                onClick = { isMenuExpanded = true },
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = "More",
+                    tint = Color(0xFF9CA3AF),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            DropdownMenu(
+                expanded = isMenuExpanded,
+                onDismissRequest = { isMenuExpanded = false },
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFF1E242C))
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Play Song", color = Color.White) },
+                    leadingIcon = { Icon(Icons.Default.PlayArrow, contentDescription = null, tint = ActiveGreen) },
+                    onClick = {
+                        isMenuExpanded = false
+                        onClick()
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Add to Playlist", color = Color.White) },
+                    leadingIcon = { Icon(Icons.Default.PlaylistAdd, contentDescription = null, tint = ActiveGreen) },
+                    onClick = {
+                        isMenuExpanded = false
+                        onAddToPlaylist()
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text(if (song.isLiked) "Unlike" else "Favorite", color = Color.White) },
+                    leadingIcon = {
+                        Icon(
+                            if (song.isLiked) Icons.Default.FavoriteBorder else Icons.Default.Favorite,
+                            contentDescription = null,
+                            tint = Color(0xFFEF4444)
+                        )
+                    },
+                    onClick = {
+                        isMenuExpanded = false
+                        onToggleLike()
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Delete Song", color = Color(0xFFEF4444)) },
+                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = Color(0xFFEF4444)) },
+                    onClick = {
+                        isMenuExpanded = false
+                        onDeleteSong()
+                    }
+                )
+            }
         }
     }
 }

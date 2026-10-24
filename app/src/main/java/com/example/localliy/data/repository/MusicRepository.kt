@@ -16,26 +16,13 @@ import java.util.UUID
 
 class MusicRepository {
 
-    private val sampleSongs = mutableListOf(
-        Song("1", "Do I Wanna Know?", "Arctic Monkeys", "AM", 272000L, isLiked = true),
-        Song("2", "Starboy", "The Weeknd", "Starboy", 230000L, isLiked = true),
-        Song("3", "R U Mine?", "Arctic Monkeys", "AM", 223000L, isLiked = false),
-        Song("4", "Blinding Lights", "The Weeknd", "After Hours", 200000L, isLiked = true),
-        Song("5", "Sweater Weather", "The Neighbourhood", "I Love You.", 240000L, isLiked = false),
-        Song("6", "505", "Arctic Monkeys", "Favourite Worst Nightmare", 253000L, isLiked = true),
-        Song("7", "Midnight City", "M83", "Hurry Up, We're Dreaming", 243000L, isLiked = false),
-        Song("8", "Nightcall", "Kavinsky", "OutRun", 259000L, isLiked = true),
-        Song("9", "The Less I Know The Better", "Tame Impala", "Currents", 216000L, isLiked = true)
-    )
-
     private val localSongs = mutableListOf<Song>()
-
     private val customPlaylists = mutableListOf<Playlist>()
 
     var isPermissionGranted: Boolean = false
 
     val allSongs: List<Song>
-        get() = if (localSongs.isNotEmpty()) localSongs else sampleSongs
+        get() = localSongs
 
     fun scanLocalAudio(context: Context): Int {
         try {
@@ -201,18 +188,24 @@ class MusicRepository {
         }
     }
 
+    fun getCustomPlaylists(): List<Playlist> = customPlaylists
+
     fun toggleLike(songId: String) {
         val localIndex = localSongs.indexOfFirst { it.id == songId }
         if (localIndex != -1) {
             val song = localSongs[localIndex]
             localSongs[localIndex] = song.copy(isLiked = !song.isLiked)
-            return
         }
+    }
 
-        val sampleIndex = sampleSongs.indexOfFirst { it.id == songId }
-        if (sampleIndex != -1) {
-            val song = sampleSongs[sampleIndex]
-            sampleSongs[sampleIndex] = song.copy(isLiked = !song.isLiked)
+    fun deleteSong(songId: String) {
+        localSongs.removeIf { it.id == songId }
+        customPlaylists.forEach { pl ->
+            val updatedSongs = pl.songs.filterNot { it.id == songId }
+            val index = customPlaylists.indexOf(pl)
+            if (index != -1) {
+                customPlaylists[index] = pl.copy(songs = updatedSongs)
+            }
         }
     }
 

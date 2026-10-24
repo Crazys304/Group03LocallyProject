@@ -66,6 +66,8 @@ fun LibraryScreen(
     var showCreateOrEditPlaylistDialog by remember { mutableStateOf(false) }
     var editingPlaylist by remember { mutableStateOf<Playlist?>(null) }
     var addingSongsToPlaylist by remember { mutableStateOf<Playlist?>(null) }
+    var targetSongForPlaylist by remember { mutableStateOf<Song?>(null) }
+    var targetMultipleSongsForPlaylist by remember { mutableStateOf<List<Song>?>(null) }
     var activeDetail by remember { mutableStateOf<DetailSelection?>(null) }
 
     // Refresh trigger state
@@ -137,7 +139,7 @@ fun LibraryScreen(
             )
 
             // Storage Permission Scan Banner if not scanned yet
-            if (!repository.isPermissionGranted && songs.none { it.id.startsWith("local_") }) {
+            if (!repository.isPermissionGranted && songs.isEmpty()) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -190,19 +192,42 @@ fun LibraryScreen(
                             onEditPlaylist = { playlist ->
                                 editingPlaylist = playlist
                                 showCreateOrEditPlaylistDialog = true
+                            },
+                            onAddSongsToPlaylist = { playlist ->
+                                addingSongsToPlaylist = playlist
+                            },
+                            onDeletePlaylist = { playlist ->
+                                repository.deletePlaylist(playlist.id)
+                                refreshState++
                             }
                         )
                     }
                     LibraryCategory.ARTISTS -> {
                         ArtistsSection(
                             artists = artists,
-                            onArtistClick = { activeDetail = DetailSelection.ArtistDetail(it) }
+                            onArtistClick = { activeDetail = DetailSelection.ArtistDetail(it) },
+                            onPlayArtistSongs = { artist ->
+                                if (artist.songs.isNotEmpty()) {
+                                    onSongSelected(artist.songs.first())
+                                }
+                            },
+                            onAddArtistToPlaylist = { artist ->
+                                targetMultipleSongsForPlaylist = artist.songs
+                            }
                         )
                     }
                     LibraryCategory.ALBUMS -> {
                         AlbumsSection(
                             albums = albums,
-                            onAlbumClick = { activeDetail = DetailSelection.AlbumDetail(it) }
+                            onAlbumClick = { activeDetail = DetailSelection.AlbumDetail(it) },
+                            onPlayAlbum = { album ->
+                                if (album.songs.isNotEmpty()) {
+                                    onSongSelected(album.songs.first())
+                                }
+                            },
+                            onAddAlbumToPlaylist = { album ->
+                                targetMultipleSongsForPlaylist = album.songs
+                            }
                         )
                     }
                     LibraryCategory.SONGS -> {
@@ -213,6 +238,13 @@ fun LibraryScreen(
                             onSongClick = onSongSelected,
                             onToggleLike = { song ->
                                 repository.toggleLike(song.id)
+                                refreshState++
+                            },
+                            onAddToPlaylist = { song ->
+                                targetSongForPlaylist = song
+                            },
+                            onDeleteSong = { song ->
+                                repository.deleteSong(song.id)
                                 refreshState++
                             }
                         )
@@ -258,6 +290,40 @@ fun LibraryScreen(
                 },
                 onDismiss = { showCreateOrEditPlaylistDialog = false }
             )
+        }
+
+        targetSongForPlaylist?.let { song ->
+            SelectPlaylistForSongDialog(
+                song = song,
+                playlists = playlists,
+                onSelectPlaylist = { selectedPl ->
+                    repository.addSongsToPlaylist(selectedPl.id, listOf(song))
+                    refreshState++
+                },
+                onCreateNewPlaylist = {
+                    editingPlaylist = null
+                    showCreateOrEditPlaylistDialog = true
+                },
+                onDismiss = { targetSongForPlaylist = null }
+            )
+        }
+
+        targetMultipleSongsForPlaylist?.let { targetSongs ->
+            if (targetSongs.isNotEmpty()) {
+                SelectPlaylistForSongDialog(
+                    song = targetSongs.first(),
+                    playlists = playlists,
+                    onSelectPlaylist = { selectedPl ->
+                        repository.addSongsToPlaylist(selectedPl.id, targetSongs)
+                        refreshState++
+                    },
+                    onCreateNewPlaylist = {
+                        editingPlaylist = null
+                        showCreateOrEditPlaylistDialog = true
+                    },
+                    onDismiss = { targetMultipleSongsForPlaylist = null }
+                )
+            }
         }
 
         addingSongsToPlaylist?.let { targetPlaylist ->

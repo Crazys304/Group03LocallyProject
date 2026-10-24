@@ -17,7 +17,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
@@ -59,6 +61,8 @@ fun PlaylistsSection(
     playlists: List<Playlist>,
     onPlaylistClick: (Playlist) -> Unit,
     onEditPlaylist: (Playlist) -> Unit,
+    onAddSongsToPlaylist: (Playlist) -> Unit,
+    onDeletePlaylist: (Playlist) -> Unit,
     modifier: Modifier = Modifier
 ) {
     if (playlists.isEmpty()) {
@@ -86,7 +90,9 @@ fun PlaylistsSection(
             PlaylistItemCard(
                 playlist = playlist,
                 onClick = { onPlaylistClick(playlist) },
-                onEdit = { onEditPlaylist(playlist) }
+                onEdit = { onEditPlaylist(playlist) },
+                onAddSongs = { onAddSongsToPlaylist(playlist) },
+                onDelete = { onDeletePlaylist(playlist) }
             )
         }
     }
@@ -96,7 +102,9 @@ fun PlaylistsSection(
 fun PlaylistItemCard(
     playlist: Playlist,
     onClick: () -> Unit,
-    onEdit: () -> Unit
+    onEdit: () -> Unit,
+    onAddSongs: () -> Unit,
+    onDelete: () -> Unit
 ) {
     val cardShape = RoundedCornerShape(16.dp)
     var isMenuExpanded by remember { mutableStateOf(false) }
@@ -194,27 +202,42 @@ fun PlaylistItemCard(
                     .clip(RoundedCornerShape(12.dp))
                     .background(Color(0xFF1E242C))
             ) {
-                DropdownMenuItem(
-                    text = { Text("Edit Playlist", color = Color.White) },
-                    leadingIcon = {
-                        Icon(Icons.Default.Edit, contentDescription = null, tint = ActiveGreen)
-                    },
-                    onClick = {
-                        isMenuExpanded = false
-                        onEdit()
-                    }
-                )
+                if (playlist.id != "liked_songs") {
+                    DropdownMenuItem(
+                        text = { Text("Add Songs", color = Color.White) },
+                        leadingIcon = { Icon(Icons.Default.Add, contentDescription = null, tint = ActiveGreen) },
+                        onClick = {
+                            isMenuExpanded = false
+                            onAddSongs()
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Edit Playlist Look", color = Color.White) },
+                        leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, tint = ActiveGreen) },
+                        onClick = {
+                            isMenuExpanded = false
+                            onEdit()
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Delete Playlist", color = Color(0xFFEF4444)) },
+                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = Color(0xFFEF4444)) },
+                        onClick = {
+                            isMenuExpanded = false
+                            onDelete()
+                        }
+                    )
+                } else {
+                    DropdownMenuItem(
+                        text = { Text("View Liked Songs", color = Color.White) },
+                        leadingIcon = { Icon(Icons.Default.Favorite, contentDescription = null, tint = ActiveGreen) },
+                        onClick = {
+                            isMenuExpanded = false
+                            onClick()
+                        }
+                    )
+                }
             }
         }
     }
-}
-
-@Composable
-fun AsyncImage(
-    model: String,
-    contentDescription: String,
-    contentScale: ContentScale,
-    modifier: Modifier
-) {
-    TODO("Not yet implemented")
 }
