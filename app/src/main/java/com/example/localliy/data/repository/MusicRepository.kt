@@ -35,7 +35,8 @@ class MusicRepository {
                 MediaStore.Audio.Media.ARTIST,
                 MediaStore.Audio.Media.ALBUM,
                 MediaStore.Audio.Media.DURATION,
-                MediaStore.Audio.Media.ALBUM_ID
+                MediaStore.Audio.Media.ALBUM_ID,
+                MediaStore.Audio.Media.DATA
             )
             val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
             val queryUri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
@@ -55,6 +56,7 @@ class MusicRepository {
                 val albumColumn = c.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
                 val durationColumn = c.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
                 val albumIdColumn = c.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
+                val dataColumn = c.getColumnIndex(MediaStore.Audio.Media.DATA)
 
                 val scanned = mutableListOf<Song>()
                 while (c.moveToNext()) {
@@ -64,6 +66,19 @@ class MusicRepository {
                     val album = c.getString(albumColumn) ?: "Unknown Album"
                     val duration = c.getLong(durationColumn)
                     val albumId = c.getLong(albumIdColumn)
+                    val dataPath = if (dataColumn >= 0) c.getString(dataColumn) ?: "" else ""
+
+                    // Filter out WhatsApp voice notes & WhatsApp audio files
+                    val isWhatsAppAudio = dataPath.contains("WhatsApp", ignoreCase = true) ||
+                            dataPath.contains("com.whatsapp", ignoreCase = true) ||
+                            artist.contains("WhatsApp", ignoreCase = true) ||
+                            album.contains("WhatsApp", ignoreCase = true) ||
+                            title.contains("AUD-", ignoreCase = true) ||
+                            title.contains("PTT-", ignoreCase = true)
+
+                    if (isWhatsAppAudio) {
+                        continue // Exclude WhatsApp audio
+                    }
 
                     val contentUri = ContentUris.withAppendedId(
                         MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
@@ -95,6 +110,15 @@ class MusicRepository {
             // Permission missing or content query error
         }
         return localSongs.size
+    }
+
+    fun clearStorageAndReset(context: Context) {
+        localSongs.clear()
+        customPlaylists.clear()
+        try {
+            val prefs = context.getSharedPreferences("localliy_playlists", Context.MODE_PRIVATE)
+            prefs.edit().clear().apply()
+        } catch (_: Exception) {}
     }
 
     fun getSongs(

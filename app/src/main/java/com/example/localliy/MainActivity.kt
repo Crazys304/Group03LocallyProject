@@ -39,6 +39,7 @@ import com.example.localliy.ui.components.LocalliyBottomNavBar
 import com.example.localliy.ui.components.MiniPlayer
 import com.example.localliy.ui.components.NavDestination
 import com.example.localliy.ui.library.LibraryScreen
+import com.example.localliy.ui.settings.SettingsScreen
 import com.example.localliy.ui.theme.LocalliyTheme
 import com.example.localliy.util.MediaNotificationManager
 import com.example.localliy.util.PlaybackBroadcastReceiver
@@ -344,16 +345,17 @@ fun MainAppScreen() {
                     }
                 }
                 NavDestination.SETTINGS -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Settings Screen",
-                            color = Color.White,
-                            fontSize = 24.sp
-                        )
-                    }
+                    SettingsScreen(
+                        repository = musicRepository,
+                        onStorageCleared = {
+                            songsList = musicRepository.getSongs()
+                            currentSong = null
+                            isPlaying = false
+                            try {
+                                mediaPlayer.reset()
+                            } catch (_: Exception) {}
+                        }
+                    )
                 }
             }
         }
