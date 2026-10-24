@@ -1,11 +1,15 @@
 package com.example.localliy
 
+import android.Manifest
 import android.media.MediaPlayer
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -28,6 +32,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.localliy.data.model.RepeatMode
 import com.example.localliy.data.model.Song
 import com.example.localliy.data.repository.MusicRepository
 import com.example.localliy.ui.components.LocalliyBottomNavBar
@@ -35,6 +40,8 @@ import com.example.localliy.ui.components.MiniPlayer
 import com.example.localliy.ui.components.NavDestination
 import com.example.localliy.ui.library.LibraryScreen
 import com.example.localliy.ui.theme.LocalliyTheme
+import com.example.localliy.util.MediaNotificationManager
+import com.example.localliy.util.PlaybackBroadcastReceiver
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
@@ -55,12 +62,26 @@ fun MainAppScreen() {
     var selectedDestination by remember { mutableStateOf(NavDestination.LIBRARY) }
     val musicRepository = remember { MusicRepository() }
 
+    // Request Notification Permission on Android 13+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { _ -> }
+
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
     // Scan local media if accessible
     remember {
         musicRepository.scanLocalAudio(context)
     }
 
     var songsList by remember { mutableStateOf(musicRepository.getSongs()) }
+    var activeQueue by remember { mutableStateOf(songsList) }
+    var activeQueueName by remember { mutableStateOf("Library") }
+
     var currentSong by remember {
         mutableStateOf<Song?>(songsList.firstOrNull())
     }
@@ -68,13 +89,77 @@ fun MainAppScreen() {
     var progress by remember { mutableFloatStateOf(0.0f) }
     var isBottomBarVisible by remember { mutableStateOf(true) }
 
+    var isShuffleEnabled by remember { mutableStateOf(false) }
+    var repeatMode by remember { mutableStateOf(RepeatMode.OFF) }
+
     val mediaPlayer = remember { MediaPlayer() }
 
+    // Next Track Helper with Shuffle & Repeat support
+    fun playNextTrack() {
+        val queue = if (activeQueue.isNotEmpty()) activeQueue else musicRepository.getSongs()
+        if (queue.isEmpty()) return
+
+        val song = currentSong
+        if (repeatMode == RepeatMode.REPEAT_ONE && song != null) {
+            // Replay same song
+            currentSong = song.copy()
+            return
+        }
+
+        if (isShuffleEnabled) {
+            val randomSong = queue.random()
+            currentSong = randomSong
+        } else {
+            val currentIndex = queue.indexOfFirst { it.id == song?.id }
+            if (currentIndex != -1 && currentIndex + 1 < queue.size) {
+                currentSong = queue[currentIndex + 1]
+            } else if (repeatMode == RepeatMode.REPEAT_ALL) {
+                currentSong = queue.first()
+            } else {
+                isPlaying = false
+            }
+        }
+    }
+
+    // Previous Track Helper
+    fun playPreviousTrack() {
+        val queue = if (activeQueue.isNotEmpty()) activeQueue else musicRepository.getSongs()
+        if (queue.isEmpty()) return
+
+        val song = currentSong
+        if (isShuffleEnabled) {
+            currentSong = queue.random()
+        } else {
+            val currentIndex = queue.indexOfFirst { it.id == song?.id }
+            if (currentIndex > 0) {
+                currentSong = queue[currentIndex - 1]
+            } else {
+                currentSong = queue.last()
+            }
+        }
+    }
+
+    // Wire up Broadcast Receiver callbacks for Media Notification controls
     DisposableEffect(Unit) {
+        PlaybackBroadcastReceiver.onPlayPause = {
+            isPlaying = !isPlaying
+        }
+        PlaybackBroadcastReceiver.onPrevious = {
+            playPreviousTrack()
+        }
+        PlaybackBroadcastReceiver.onNext = {
+            playNextTrack()
+        }
+        PlaybackBroadcastReceiver.onStop = {
+            isPlaying = false
+            MediaNotificationManager.cancelNotification(context)
+        }
+
         onDispose {
             try {
                 mediaPlayer.release()
             } catch (_: Exception) {}
+            MediaNotificationManager.cancelNotification(context)
         }
     }
 
@@ -91,12 +176,7 @@ fun MainAppScreen() {
                 }
 
                 mediaPlayer.setOnCompletionListener {
-                    val all = musicRepository.getSongs()
-                    if (all.isNotEmpty()) {
-                        val currentIndex = all.indexOfFirst { it.id == song.id }
-                        val nextIndex = if (currentIndex != -1 && currentIndex + 1 < all.size) currentIndex + 1 else 0
-                        currentSong = all[nextIndex]
-                    }
+                    playNextTrack()
                 }
             } catch (_: Exception) {
                 // Audio file playback error
@@ -116,6 +196,20 @@ fun MainAppScreen() {
                 }
             }
         } catch (_: Exception) {}
+    }
+
+    // Sync Notification Status
+    LaunchedEffect(currentSong, isPlaying, activeQueueName) {
+        if (currentSong != null) {
+            MediaNotificationManager.showNotification(
+                context = context,
+                song = currentSong,
+                isPlaying = isPlaying,
+                queueName = activeQueueName
+            )
+        } else {
+            MediaNotificationManager.cancelNotification(context)
+        }
     }
 
     // Progress Updater
@@ -140,22 +234,19 @@ fun MainAppScreen() {
                         MiniPlayer(
                             currentSong = song,
                             isPlaying = isPlaying,
+                            queueName = activeQueueName,
+                            isShuffleEnabled = isShuffleEnabled,
+                            repeatMode = repeatMode,
                             progress = progress,
                             onPlayPauseToggle = { isPlaying = !isPlaying },
-                            onSkipNext = {
-                                val all = musicRepository.getSongs()
-                                if (all.isNotEmpty()) {
-                                    val currentIndex = all.indexOfFirst { it.id == song.id }
-                                    val nextIndex = if (currentIndex != -1 && currentIndex + 1 < all.size) currentIndex + 1 else 0
-                                    currentSong = all[nextIndex]
-                                }
-                            },
-                            onSkipPrevious = {
-                                val all = musicRepository.getSongs()
-                                if (all.isNotEmpty()) {
-                                    val currentIndex = all.indexOfFirst { it.id == song.id }
-                                    val prevIndex = if (currentIndex > 0) currentIndex - 1 else all.size - 1
-                                    currentSong = all[prevIndex]
+                            onSkipNext = { playNextTrack() },
+                            onSkipPrevious = { playPreviousTrack() },
+                            onToggleShuffle = { isShuffleEnabled = !isShuffleEnabled },
+                            onToggleRepeat = {
+                                repeatMode = when (repeatMode) {
+                                    RepeatMode.OFF -> RepeatMode.REPEAT_ALL
+                                    RepeatMode.REPEAT_ALL -> RepeatMode.REPEAT_ONE
+                                    RepeatMode.REPEAT_ONE -> RepeatMode.OFF
                                 }
                             },
                             onToggleLike = { target ->
@@ -187,6 +278,24 @@ fun MainAppScreen() {
                 NavDestination.LIBRARY -> {
                     LibraryScreen(
                         repository = musicRepository,
+                        isShuffleEnabled = isShuffleEnabled,
+                        repeatMode = repeatMode,
+                        onToggleShuffle = { isShuffleEnabled = !isShuffleEnabled },
+                        onToggleRepeat = {
+                            repeatMode = when (repeatMode) {
+                                RepeatMode.OFF -> RepeatMode.REPEAT_ALL
+                                RepeatMode.REPEAT_ALL -> RepeatMode.REPEAT_ONE
+                                RepeatMode.REPEAT_ONE -> RepeatMode.OFF
+                            }
+                        },
+                        onPlayAllQueue = { queueSongs, queueTitle ->
+                            if (queueSongs.isNotEmpty()) {
+                                activeQueue = queueSongs
+                                activeQueueName = queueTitle
+                                currentSong = if (isShuffleEnabled) queueSongs.random() else queueSongs.first()
+                                isPlaying = true
+                            }
+                        },
                         onSongSelected = { song ->
                             currentSong = song
                             isPlaying = true

@@ -21,6 +21,9 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.RepeatOne
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.Icon
@@ -36,6 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.localliy.data.model.RepeatMode
 import com.example.localliy.data.model.Song
 
 val MiniPlayerBg = Color(0xFF13171A)
@@ -46,11 +50,16 @@ val AccentGreen = Color(0xFF22C55E)
 fun MiniPlayer(
     currentSong: Song?,
     isPlaying: Boolean,
+    queueName: String = "",
+    isShuffleEnabled: Boolean = false,
+    repeatMode: RepeatMode = RepeatMode.OFF,
     onPlayPauseToggle: () -> Unit,
     onSkipNext: () -> Unit,
     onSkipPrevious: () -> Unit,
     onToggleLike: (Song) -> Unit,
-    progress: Float = 0.35f,
+    onToggleShuffle: () -> Unit = {},
+    onToggleRepeat: () -> Unit = {},
+    progress: Float = 0.0f,
     onClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -89,9 +98,9 @@ fun MiniPlayer(
                     )
                 }
 
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(10.dp))
 
-                // Song Title & Artist
+                // Song Title & Artist / Queue Source
                 Column(
                     modifier = Modifier.weight(1f)
                 ) {
@@ -104,9 +113,9 @@ fun MiniPlayer(
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = currentSong.artist,
+                        text = currentSong.artist + if (queueName.isNotBlank()) " • From $queueName" else "",
                         color = Color(0xFF9CA3AF),
-                        fontSize = 13.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Normal,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -116,24 +125,37 @@ fun MiniPlayer(
                 // Action Controls
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    horizontalArrangement = Arrangement.spacedBy(1.dp)
                 ) {
+                    // Shuffle Toggle
+                    IconButton(
+                        onClick = onToggleShuffle,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Shuffle,
+                            contentDescription = "Shuffle",
+                            tint = if (isShuffleEnabled) AccentGreen else Color(0xFF6B7280),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
                     IconButton(
                         onClick = onSkipPrevious,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(32.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.SkipPrevious,
                             contentDescription = "Previous",
                             tint = Color.White,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                     }
 
-                    // Play/Pause circular button with green border or accent
+                    // Play/Pause circular button
                     Box(
                         modifier = Modifier
-                            .size(38.dp)
+                            .size(36.dp)
                             .clip(CircleShape)
                             .border(width = 1.5.dp, color = AccentGreen, shape = CircleShape)
                             .background(Color(0xFF1B2320))
@@ -144,31 +166,46 @@ fun MiniPlayer(
                             imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                             contentDescription = if (isPlaying) "Pause" else "Play",
                             tint = Color.White,
-                            modifier = Modifier.size(22.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                     }
 
                     IconButton(
                         onClick = onSkipNext,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(32.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.SkipNext,
                             contentDescription = "Next",
                             tint = Color.White,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    // Repeat Toggle
+                    IconButton(
+                        onClick = onToggleRepeat,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        val icon = if (repeatMode == RepeatMode.REPEAT_ONE) Icons.Default.RepeatOne else Icons.Default.Repeat
+                        val tint = if (repeatMode != RepeatMode.OFF) AccentGreen else Color(0xFF6B7280)
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = "Repeat Mode",
+                            tint = tint,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
 
                     IconButton(
                         onClick = { onToggleLike(currentSong) },
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(32.dp)
                     ) {
                         Icon(
                             imageVector = if (currentSong.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                             contentDescription = "Like",
                             tint = if (currentSong.isLiked) Color(0xFFEF4444) else Color(0xFF9CA3AF),
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
@@ -178,7 +215,7 @@ fun MiniPlayer(
 
             // Progress Indicator
             LinearProgressIndicator(
-                progress = { progress },
+                progress = { progress.coerceIn(0f, 1f) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(3.dp)

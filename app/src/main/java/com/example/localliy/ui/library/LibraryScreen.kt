@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.sp
 import com.example.localliy.data.model.Album
 import com.example.localliy.data.model.Artist
 import com.example.localliy.data.model.Playlist
+import com.example.localliy.data.model.RepeatMode
 import com.example.localliy.data.model.Song
 import com.example.localliy.data.model.SortOption
 import com.example.localliy.data.repository.MusicRepository
@@ -53,6 +54,11 @@ sealed class DetailSelection {
 fun LibraryScreen(
     repository: MusicRepository,
     onSongSelected: (Song) -> Unit,
+    onPlayAllQueue: (List<Song>, String) -> Unit = { _, _ -> },
+    isShuffleEnabled: Boolean = false,
+    repeatMode: RepeatMode = RepeatMode.OFF,
+    onToggleShuffle: () -> Unit = {},
+    onToggleRepeat: () -> Unit = {},
     onSongLikedToggle: (Song) -> Unit = {},
     onBottomBarVisibilityChanged: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
@@ -217,7 +223,7 @@ fun LibraryScreen(
                             onArtistClick = { activeDetail = DetailSelection.ArtistDetail(it) },
                             onPlayArtistSongs = { artist ->
                                 if (artist.songs.isNotEmpty()) {
-                                    onSongSelected(artist.songs.first())
+                                    onPlayAllQueue(artist.songs, artist.name)
                                 }
                             },
                             onAddArtistToPlaylist = { artist ->
@@ -231,7 +237,7 @@ fun LibraryScreen(
                             onAlbumClick = { activeDetail = DetailSelection.AlbumDetail(it) },
                             onPlayAlbum = { album ->
                                 if (album.songs.isNotEmpty()) {
-                                    onSongSelected(album.songs.first())
+                                    onPlayAllQueue(album.songs, album.name)
                                 }
                             },
                             onAddAlbumToPlaylist = { album ->
@@ -244,7 +250,10 @@ fun LibraryScreen(
                             songs = songs,
                             currentSortOption = currentSortOption,
                             onOpenSortDialog = { showSortDialog = true },
-                            onSongClick = onSongSelected,
+                            onSongClick = { song ->
+                                onPlayAllQueue(songs, "Songs")
+                                onSongSelected(song)
+                            },
                             onToggleLike = { song ->
                                 repository.toggleLike(song.id)
                                 onSongLikedToggle(song)
@@ -272,7 +281,13 @@ fun LibraryScreen(
                         title = currentPl.name,
                         subtitle = "${currentPl.songCount} songs" + if (currentPl.description.isNotBlank()) " • ${currentPl.description}" else "",
                         songs = currentPl.songs,
+                        isShuffleEnabled = isShuffleEnabled,
+                        repeatMode = repeatMode,
+                        onToggleShuffle = onToggleShuffle,
+                        onToggleRepeat = onToggleRepeat,
+                        onPlayAllQueue = onPlayAllQueue,
                         onSongClick = { song ->
+                            onPlayAllQueue(currentPl.songs, currentPl.name)
                             onSongSelected(song)
                         },
                         onToggleLike = { song ->
@@ -300,7 +315,13 @@ fun LibraryScreen(
                         title = detail.album.name,
                         subtitle = "Album by ${detail.album.artist} • ${detail.album.songCount} songs",
                         songs = detail.album.songs,
+                        isShuffleEnabled = isShuffleEnabled,
+                        repeatMode = repeatMode,
+                        onToggleShuffle = onToggleShuffle,
+                        onToggleRepeat = onToggleRepeat,
+                        onPlayAllQueue = onPlayAllQueue,
                         onSongClick = { song ->
+                            onPlayAllQueue(detail.album.songs, detail.album.name)
                             onSongSelected(song)
                         },
                         onToggleLike = { song ->
@@ -316,7 +337,13 @@ fun LibraryScreen(
                         title = detail.artist.name,
                         subtitle = "${detail.artist.songCount} songs • ${detail.artist.albumCount} albums",
                         songs = detail.artist.songs,
+                        isShuffleEnabled = isShuffleEnabled,
+                        repeatMode = repeatMode,
+                        onToggleShuffle = onToggleShuffle,
+                        onToggleRepeat = onToggleRepeat,
+                        onPlayAllQueue = onPlayAllQueue,
                         onSongClick = { song ->
+                            onPlayAllQueue(detail.artist.songs, detail.artist.name)
                             onSongSelected(song)
                         },
                         onToggleLike = { song ->

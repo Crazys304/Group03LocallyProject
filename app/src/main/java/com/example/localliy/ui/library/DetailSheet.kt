@@ -26,6 +26,9 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.RepeatOne
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -42,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.localliy.data.model.RepeatMode
 import com.example.localliy.data.model.Song
 
 @Composable
@@ -50,9 +54,14 @@ fun DetailSheet(
     subtitle: String,
     songs: List<Song>,
     onSongClick: (Song) -> Unit,
+    onPlayAllQueue: (List<Song>, String) -> Unit,
     onToggleLike: (Song) -> Unit,
     onClose: () -> Unit,
     isPlaylist: Boolean = false,
+    isShuffleEnabled: Boolean = false,
+    repeatMode: RepeatMode = RepeatMode.OFF,
+    onToggleShuffle: () -> Unit = {},
+    onToggleRepeat: () -> Unit = {},
     onAddSongsToPlaylist: (() -> Unit)? = null,
     onRemoveSongFromPlaylist: ((Song) -> Unit)? = null,
     modifier: Modifier = Modifier
@@ -114,14 +123,15 @@ fun DetailSheet(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Action Row: Play all & Add Songs button
+            // Action Row: Play all, Shuffle, Repeat & Add Songs
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 if (songs.isNotEmpty()) {
                     Button(
-                        onClick = { onSongClick(songs.first()) },
+                        onClick = { onPlayAllQueue(songs, title) },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = ActiveGreen,
                             contentColor = Color.Black
@@ -136,6 +146,40 @@ fun DetailSheet(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text("Play All (${songs.size})", fontWeight = FontWeight.Bold)
+                    }
+
+                    // Shuffle Toggle
+                    IconButton(
+                        onClick = onToggleShuffle,
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (isShuffleEnabled) ActiveGreenBg else Color(0xFF1B222B))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Shuffle,
+                            contentDescription = "Shuffle",
+                            tint = if (isShuffleEnabled) ActiveGreen else Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    // Repeat Toggle
+                    IconButton(
+                        onClick = onToggleRepeat,
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (repeatMode != RepeatMode.OFF) ActiveGreenBg else Color(0xFF1B222B))
+                    ) {
+                        val icon = if (repeatMode == RepeatMode.REPEAT_ONE) Icons.Default.RepeatOne else Icons.Default.Repeat
+                        val tint = if (repeatMode != RepeatMode.OFF) ActiveGreen else Color.White
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = "Repeat",
+                            tint = tint,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
 
