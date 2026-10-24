@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Uri
 import android.provider.MediaStore
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import com.example.localliy.data.model.Album
 import com.example.localliy.data.model.Artist
 import com.example.localliy.data.model.Playlist
@@ -12,6 +13,8 @@ import com.example.localliy.data.model.PlaylistIconType
 import com.example.localliy.data.model.PlaylistThemes
 import com.example.localliy.data.model.Song
 import com.example.localliy.data.model.SortOption
+import org.json.JSONArray
+import org.json.JSONObject
 import java.util.UUID
 
 class MusicRepository {
@@ -87,6 +90,7 @@ class MusicRepository {
                 localSongs.clear()
                 localSongs.addAll(scanned)
             }
+            loadPlaylistsFromPrefs(context)
         } catch (_: Exception) {
             // Permission missing or content query error
         }
@@ -221,6 +225,7 @@ class MusicRepository {
     }
 
     fun createPlaylist(
+        context: Context? = null,
         name: String,
         description: String = "",
         iconType: PlaylistIconType = PlaylistIconType.MUSIC,
@@ -238,10 +243,12 @@ class MusicRepository {
             gradientColors = gradientColors
         )
         customPlaylists.add(newPlaylist)
+        context?.let { savePlaylistsToPrefs(it) }
         return newPlaylist
     }
 
     fun updatePlaylist(
+        context: Context? = null,
         playlistId: String,
         newName: String,
         newDescription: String,
@@ -259,30 +266,122 @@ class MusicRepository {
                 gradientColors = newGradientColors,
                 customImageUri = newCustomImageUri
             )
+            context?.let { savePlaylistsToPrefs(it) }
             return true
         }
         return false
     }
 
-    fun deletePlaylist(playlistId: String): Boolean {
-        return customPlaylists.removeIf { it.id == playlistId }
+    fun deletePlaylist(context: Context? = null, playlistId: String): Boolean {
+        val removed = customPlaylists.removeIf { it.id == playlistId }
+        if (removed && context != null) {
+            savePlaylistsToPrefs(context)
+        }
+        return removed
     }
 
-    fun addSongsToPlaylist(playlistId: String, songsToAdd: List<Song>) {
+    fun addSongsToPlaylist(context: Context? = null, playlistId: String, songsToAdd: List<Song>) {
         val index = customPlaylists.indexOfFirst { it.id == playlistId }
         if (index != -1) {
             val existing = customPlaylists[index]
             val updatedSongs = (existing.songs + songsToAdd).distinctBy { it.id }
             customPlaylists[index] = existing.copy(songs = updatedSongs)
+            context?.let { savePlaylistsToPrefs(it) }
         }
     }
 
-    fun removeSongFromPlaylist(playlistId: String, songId: String) {
+    fun removeSongFromPlaylist(context: Context? = null, playlistId: String, songId: String) {
         val index = customPlaylists.indexOfFirst { it.id == playlistId }
         if (index != -1) {
             val existing = customPlaylists[index]
             val updatedSongs = existing.songs.filterNot { it.id == songId }
             customPlaylists[index] = existing.copy(songs = updatedSongs)
+            context?.let { savePlaylistsToPrefs(it) }
+        }
+    }
+
+    fun savePlaylistsToPrefs(context: Context) {
+        try {
+            val prefs = context.getSharedPreferences("localliy_playlists", Context.MODE_PRIVATE)
+            val jsonArray = JSONArray()
+
+            customPlaylists.forEach { playlist ->
+                val obj = JSONObject()
+                obj.put("id", playlist.id)
+                obj.put("name", playlist.name)
+                obj.put("description", playlist.description)
+                obj.put("iconType", playlist.iconType.name)
+                obj.put("customImageUri", playlist.customImageUri ?: "")
+
+                val c1 = playlist.gradientColors.getOrNull(0)?.toArgb() ?: 0
+                val c2 = playlist.gradientColors.getOrNull(1)?.toArgb() ?: 0
+                obj.put("color1", c1)
+                obj.put("color2", c2)
+
+                val songIdsArray = JSONArray()
+                playlist.songs.forEach { songIdsArray.put(it.id) }
+                obj.put("songIds", songIdsArray)
+
+                jsonArray.put(obj)
+            }
+
+            prefs.edit().putString("saved_playlists_json", jsonArray.toString()).apply()
+        } catch (_: Exception) {
+            // Saving failure
+        }
+    }
+
+    fun loadPlaylistsFromPrefs(context: Context) {
+        try {
+            val prefs = context.getSharedPreferences("localliy_playlists", Context.MODE_PRIVATE)
+            val jsonString = prefs.getString("saved_playlists_json", null) ?: return
+            val jsonArray = JSONArray(jsonString)
+
+            customPlaylists.clear()
+            for (i in 0 until jsonArray.length()) {
+                val obj = jsonArray.getJSONObject(i)
+                val id = obj.getString("id")
+                val name = obj.getString("name")
+                val description = obj.optString("description", "")
+                val iconTypeName = obj.optString("iconType", "MUSIC")
+                val customImageUri = obj.optString("customImageUri", "").ifBlank { null }
+                val color1 = obj.optInt("color1", 0)
+                val color2 = obj.optInt("color2", 0)
+
+                val iconType = try {
+                    PlaylistIconType.valueOf(iconTypeName)
+                } catch (_: Exception) {
+                    PlaylistIconType.MUSIC
+                }
+
+                val gradientColors = if (color1 != 0 && color2 != 0) {
+                    listOf(Color(color1), Color(color2))
+                } else {
+                    PlaylistThemes.EmeraldGreen.colors
+                }
+
+                val songIdsArray = obj.optJSONArray("songIds") ?: JSONArray()
+                val playlistSongIds = mutableSetOf<String>()
+                for (j in 0 until songIdsArray.length()) {
+                    playlistSongIds.add(songIdsArray.getString(j))
+                }
+
+                val playlistSongs = localSongs.filter { playlistSongIds.contains(it.id) }
+
+                customPlaylists.add(
+                    Playlist(
+                        id = id,
+                        name = name,
+                        description = description,
+                        songs = playlistSongs,
+                        iconType = iconType,
+                        customImageUri = customImageUri,
+                        gradientColors = gradientColors
+                    )
+                )
+            }
+        } catch (_: Exception) {
+            // Restore failure
         }
     }
 }

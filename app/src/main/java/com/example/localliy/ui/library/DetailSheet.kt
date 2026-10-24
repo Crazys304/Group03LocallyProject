@@ -21,7 +21,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
@@ -73,7 +72,7 @@ fun DetailSheet(
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
-            // Header Row with Back Button and Close Button
+            // Header Row with Back Button
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -109,18 +108,6 @@ fun DetailSheet(
                         fontSize = 13.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
-                    )
-                }
-
-                IconButton(
-                    onClick = onClose,
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Close",
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
                     )
                 }
             }

@@ -206,7 +206,7 @@ fun LibraryScreen(
                                 addingSongsToPlaylist = playlist
                             },
                             onDeletePlaylist = { playlist ->
-                                repository.deletePlaylist(playlist.id)
+                                repository.deletePlaylist(context, playlist.id)
                                 refreshState++
                             }
                         )
@@ -273,7 +273,7 @@ fun LibraryScreen(
                         subtitle = "${currentPl.songCount} songs" + if (currentPl.description.isNotBlank()) " • ${currentPl.description}" else "",
                         songs = currentPl.songs,
                         onSongClick = { song ->
-                            onSongSelected(song) // Play song WITHOUT closing playlist folder screen!
+                            onSongSelected(song)
                         },
                         onToggleLike = { song ->
                             repository.toggleLike(song.id)
@@ -286,7 +286,7 @@ fun LibraryScreen(
                             addingSongsToPlaylist = currentPl
                         },
                         onRemoveSongFromPlaylist = { song ->
-                            repository.removeSongFromPlaylist(currentPl.id, song.id)
+                            repository.removeSongFromPlaylist(context, currentPl.id, song.id)
                             refreshState++
                             val updated = repository.getPlaylists().firstOrNull { it.id == currentPl.id }
                             if (updated != null) {
@@ -301,7 +301,7 @@ fun LibraryScreen(
                         subtitle = "Album by ${detail.album.artist} • ${detail.album.songCount} songs",
                         songs = detail.album.songs,
                         onSongClick = { song ->
-                            onSongSelected(song) // Play song WITHOUT closing album view
+                            onSongSelected(song)
                         },
                         onToggleLike = { song ->
                             repository.toggleLike(song.id)
@@ -317,7 +317,7 @@ fun LibraryScreen(
                         subtitle = "${detail.artist.songCount} songs • ${detail.artist.albumCount} albums",
                         songs = detail.artist.songs,
                         onSongClick = { song ->
-                            onSongSelected(song) // Play song WITHOUT closing artist view
+                            onSongSelected(song)
                         },
                         onToggleLike = { song ->
                             repository.toggleLike(song.id)
@@ -347,6 +347,7 @@ fun LibraryScreen(
                 onSavePlaylist = { name, description, iconType, gradientColors, customImageUri ->
                     if (editingPlaylist == null) {
                         repository.createPlaylist(
+                            context = context,
                             name = name,
                             description = description,
                             iconType = iconType,
@@ -355,6 +356,7 @@ fun LibraryScreen(
                         )
                     } else {
                         repository.updatePlaylist(
+                            context = context,
                             playlistId = editingPlaylist!!.id,
                             newName = name,
                             newDescription = description,
@@ -374,7 +376,7 @@ fun LibraryScreen(
                 song = song,
                 playlists = playlists,
                 onSelectPlaylist = { selectedPl ->
-                    repository.addSongsToPlaylist(selectedPl.id, listOf(song))
+                    repository.addSongsToPlaylist(context, selectedPl.id, listOf(song))
                     refreshState++
                 },
                 onCreateNewPlaylist = {
@@ -391,7 +393,7 @@ fun LibraryScreen(
                     song = targetSongs.first(),
                     playlists = playlists,
                     onSelectPlaylist = { selectedPl ->
-                        repository.addSongsToPlaylist(selectedPl.id, targetSongs)
+                        repository.addSongsToPlaylist(context, selectedPl.id, targetSongs)
                         refreshState++
                     },
                     onCreateNewPlaylist = {
@@ -408,7 +410,7 @@ fun LibraryScreen(
                 playlist = targetPlaylist,
                 allSongs = repository.getSongs(),
                 onAddSongs = { selectedSongs ->
-                    repository.addSongsToPlaylist(targetPlaylist.id, selectedSongs)
+                    repository.addSongsToPlaylist(context, targetPlaylist.id, selectedSongs)
                     refreshState++
                     // Update active detail sheet if open
                     if (activeDetail is DetailSelection.PlaylistDetail) {

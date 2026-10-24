@@ -1,5 +1,7 @@
 package com.example.localliy
 
+import android.media.MediaPlayer
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -12,6 +14,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -31,6 +35,7 @@ import com.example.localliy.ui.components.MiniPlayer
 import com.example.localliy.ui.components.NavDestination
 import com.example.localliy.ui.library.LibraryScreen
 import com.example.localliy.ui.theme.LocalliyTheme
+import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -60,8 +65,70 @@ fun MainAppScreen() {
         mutableStateOf<Song?>(songsList.firstOrNull())
     }
     var isPlaying by remember { mutableStateOf(false) }
-    var progress by remember { mutableFloatStateOf(0.42f) }
+    var progress by remember { mutableFloatStateOf(0.0f) }
     var isBottomBarVisible by remember { mutableStateOf(true) }
+
+    val mediaPlayer = remember { MediaPlayer() }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            try {
+                mediaPlayer.release()
+            } catch (_: Exception) {}
+        }
+    }
+
+    // Audio Playback Controller
+    LaunchedEffect(currentSong) {
+        val song = currentSong
+        if (song != null && song.contentUri != null) {
+            try {
+                mediaPlayer.reset()
+                mediaPlayer.setDataSource(context, Uri.parse(song.contentUri))
+                mediaPlayer.prepare()
+                if (isPlaying) {
+                    mediaPlayer.start()
+                }
+
+                mediaPlayer.setOnCompletionListener {
+                    val all = musicRepository.getSongs()
+                    if (all.isNotEmpty()) {
+                        val currentIndex = all.indexOfFirst { it.id == song.id }
+                        val nextIndex = if (currentIndex != -1 && currentIndex + 1 < all.size) currentIndex + 1 else 0
+                        currentSong = all[nextIndex]
+                    }
+                }
+            } catch (_: Exception) {
+                // Audio file playback error
+            }
+        }
+    }
+
+    LaunchedEffect(isPlaying) {
+        try {
+            if (isPlaying) {
+                if (!mediaPlayer.isPlaying && currentSong?.contentUri != null) {
+                    mediaPlayer.start()
+                }
+            } else {
+                if (mediaPlayer.isPlaying) {
+                    mediaPlayer.pause()
+                }
+            }
+        } catch (_: Exception) {}
+    }
+
+    // Progress Updater
+    LaunchedEffect(isPlaying, currentSong) {
+        while (isPlaying) {
+            try {
+                if (mediaPlayer.isPlaying && mediaPlayer.duration > 0) {
+                    progress = mediaPlayer.currentPosition.toFloat() / mediaPlayer.duration.toFloat()
+                }
+            } catch (_: Exception) {}
+            delay(500)
+        }
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
