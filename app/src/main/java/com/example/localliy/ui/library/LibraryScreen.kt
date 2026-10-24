@@ -53,6 +53,7 @@ sealed class DetailSelection {
 fun LibraryScreen(
     repository: MusicRepository,
     onSongSelected: (Song) -> Unit,
+    onSongLikedToggle: (Song) -> Unit = {},
     onBottomBarVisibilityChanged: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -246,6 +247,7 @@ fun LibraryScreen(
                             onSongClick = onSongSelected,
                             onToggleLike = { song ->
                                 repository.toggleLike(song.id)
+                                onSongLikedToggle(song)
                                 refreshState++
                             },
                             onAddToPlaylist = { song ->
@@ -271,11 +273,11 @@ fun LibraryScreen(
                         subtitle = "${currentPl.songCount} songs" + if (currentPl.description.isNotBlank()) " • ${currentPl.description}" else "",
                         songs = currentPl.songs,
                         onSongClick = { song ->
-                            onSongSelected(song)
-                            activeDetail = null
+                            onSongSelected(song) // Play song WITHOUT closing playlist folder screen!
                         },
                         onToggleLike = { song ->
                             repository.toggleLike(song.id)
+                            onSongLikedToggle(song)
                             refreshState++
                         },
                         onClose = { activeDetail = null },
@@ -299,11 +301,11 @@ fun LibraryScreen(
                         subtitle = "Album by ${detail.album.artist} • ${detail.album.songCount} songs",
                         songs = detail.album.songs,
                         onSongClick = { song ->
-                            onSongSelected(song)
-                            activeDetail = null
+                            onSongSelected(song) // Play song WITHOUT closing album view
                         },
                         onToggleLike = { song ->
                             repository.toggleLike(song.id)
+                            onSongLikedToggle(song)
                             refreshState++
                         },
                         onClose = { activeDetail = null }
@@ -315,11 +317,11 @@ fun LibraryScreen(
                         subtitle = "${detail.artist.songCount} songs • ${detail.artist.albumCount} albums",
                         songs = detail.artist.songs,
                         onSongClick = { song ->
-                            onSongSelected(song)
-                            activeDetail = null
+                            onSongSelected(song) // Play song WITHOUT closing artist view
                         },
                         onToggleLike = { song ->
                             repository.toggleLike(song.id)
+                            onSongLikedToggle(song)
                             refreshState++
                         },
                         onClose = { activeDetail = null }

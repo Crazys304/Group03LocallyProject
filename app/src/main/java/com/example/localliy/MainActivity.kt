@@ -124,6 +124,11 @@ fun MainAppScreen() {
                             currentSong = song
                             isPlaying = true
                         },
+                        onSongLikedToggle = { song ->
+                            if (currentSong?.id == song.id) {
+                                currentSong = currentSong?.copy(isLiked = !song.isLiked)
+                            }
+                        },
                         onBottomBarVisibilityChanged = { visible ->
                             isBottomBarVisible = visible
                         }

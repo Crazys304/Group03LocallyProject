@@ -194,7 +194,18 @@ class MusicRepository {
         val localIndex = localSongs.indexOfFirst { it.id == songId }
         if (localIndex != -1) {
             val song = localSongs[localIndex]
-            localSongs[localIndex] = song.copy(isLiked = !song.isLiked)
+            val updatedSong = song.copy(isLiked = !song.isLiked)
+            localSongs[localIndex] = updatedSong
+
+            // Update song state inside all custom playlists
+            customPlaylists.forEachIndexed { i, pl ->
+                if (pl.songs.any { it.id == songId }) {
+                    val updatedSongs = pl.songs.map {
+                        if (it.id == songId) updatedSong else it
+                    }
+                    customPlaylists[i] = pl.copy(songs = updatedSongs)
+                }
+            }
         }
     }
 
