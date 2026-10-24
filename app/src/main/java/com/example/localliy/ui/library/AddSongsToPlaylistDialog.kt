@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -59,28 +60,32 @@ fun AddSongsToPlaylistDialog(
 
     Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .fillMaxHeight(0.85f)
-            .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-            .background(Color(0xFF14191F))
+            .fillMaxSize()
+            .background(Color(0xFF0C0F12))
             .padding(16.dp)
     ) {
-        Column {
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Add Songs to ${playlist.name}",
                         color = Color.White,
-                        fontSize = 20.sp,
+                        fontSize = 22.sp,
                         fontWeight = FontWeight.Bold
                     )
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = "${selectedSongIds.size} songs selected",
                         color = ActiveGreen,
-                        fontSize = 13.sp
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
                     )
                 }
 
@@ -88,92 +93,108 @@ fun AddSongsToPlaylistDialog(
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Close",
-                        tint = Color.White
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(bottom = 12.dp)
-            ) {
-                items(allSongs, key = { it.id }) { song ->
-                    val isSelected = selectedSongIds.contains(song.id)
+            if (allSongs.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No songs found in device library",
+                        color = Color(0xFF9CA3AF),
+                        fontSize = 15.sp
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(bottom = 16.dp)
+                ) {
+                    items(allSongs, key = { it.id }) { song ->
+                        val isSelected = selectedSongIds.contains(song.id)
 
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(if (isSelected) ActiveGreenBg else Color(0xFF1B222B))
-                            .clickable {
-                                if (isSelected) {
-                                    selectedSongIds.remove(song.id)
-                                } else {
-                                    selectedSongIds.add(song.id)
-                                }
-                            }
-                            .padding(10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Checkbox(
-                            checked = isSelected,
-                            onCheckedChange = { checked ->
-                                if (checked == true) {
-                                    if (!selectedSongIds.contains(song.id)) selectedSongIds.add(song.id)
-                                } else {
-                                    selectedSongIds.remove(song.id)
-                                }
-                            },
-                            colors = CheckboxDefaults.colors(
-                                checkedColor = ActiveGreen,
-                                uncheckedColor = Color(0xFF6B7280)
-                            )
-                        )
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        Box(
+                        Row(
                             modifier = Modifier
-                                .size(40.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFF26303D)),
-                            contentAlignment = Alignment.Center
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(if (isSelected) ActiveGreenBg else Color(0xFF161B22))
+                                .clickable {
+                                    if (isSelected) {
+                                        selectedSongIds.remove(song.id)
+                                    } else {
+                                        selectedSongIds.add(song.id)
+                                    }
+                                }
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.MusicNote,
-                                contentDescription = null,
-                                tint = ActiveGreen,
-                                modifier = Modifier.size(20.dp)
+                            Checkbox(
+                                checked = isSelected,
+                                onCheckedChange = { checked ->
+                                    if (checked == true) {
+                                        if (!selectedSongIds.contains(song.id)) selectedSongIds.add(song.id)
+                                    } else {
+                                        selectedSongIds.remove(song.id)
+                                    }
+                                },
+                                colors = CheckboxDefaults.colors(
+                                    checkedColor = ActiveGreen,
+                                    uncheckedColor = Color(0xFF6B7280)
+                                )
                             )
-                        }
 
-                        Spacer(modifier = Modifier.width(12.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
 
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = song.title,
-                                color = Color.White,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = song.artist,
-                                color = Color(0xFF9CA3AF),
-                                fontSize = 13.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(Color(0xFF222B36)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.MusicNote,
+                                    contentDescription = null,
+                                    tint = ActiveGreen,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = song.title,
+                                    color = Color.White,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = song.artist,
+                                    color = Color(0xFF9CA3AF),
+                                    fontSize = 13.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Button(
                 onClick = {
@@ -185,16 +206,18 @@ fun AddSongsToPlaylistDialog(
                     containerColor = ActiveGreen,
                     contentColor = Color.Black
                 ),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth()
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = null,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(22.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Save Songs (${selectedSongIds.size})", fontWeight = FontWeight.Bold)
+                Text("Save Songs (${selectedSongIds.size})", fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
         }
     }

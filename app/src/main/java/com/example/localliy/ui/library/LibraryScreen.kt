@@ -53,6 +53,7 @@ sealed class DetailSelection {
 fun LibraryScreen(
     repository: MusicRepository,
     onSongSelected: (Song) -> Unit,
+    onBottomBarVisibilityChanged: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -72,6 +73,13 @@ fun LibraryScreen(
 
     // Refresh trigger state
     var refreshState by remember { mutableStateOf(0) }
+
+    // Detect if music-to-playlist selection screen is active
+    val isMusicToPlaylistSelectionOpen = addingSongsToPlaylist != null || targetSongForPlaylist != null || targetMultipleSongsForPlaylist != null
+
+    LaunchedEffect(isMusicToPlaylistSelectionOpen) {
+        onBottomBarVisibilityChanged(!isMusicToPlaylistSelectionOpen)
+    }
 
     val permissionToRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         Manifest.permission.READ_MEDIA_AUDIO
@@ -253,7 +261,74 @@ fun LibraryScreen(
             }
         }
 
-        // Dialogs & Sheets
+        // Detail Sheet (Playlist folder screen / Album / Artist view)
+        activeDetail?.let { detail ->
+            when (detail) {
+                is DetailSelection.PlaylistDetail -> {
+                    val currentPl = playlists.firstOrNull { it.id == detail.playlist.id } ?: detail.playlist
+                    DetailSheet(
+                        title = currentPl.name,
+                        subtitle = "${currentPl.songCount} songs" + if (currentPl.description.isNotBlank()) " • ${currentPl.description}" else "",
+                        songs = currentPl.songs,
+                        onSongClick = { song ->
+                            onSongSelected(song)
+                            activeDetail = null
+                        },
+                        onToggleLike = { song ->
+                            repository.toggleLike(song.id)
+                            refreshState++
+                        },
+                        onClose = { activeDetail = null },
+                        isPlaylist = currentPl.id != "liked_songs",
+                        onAddSongsToPlaylist = {
+                            addingSongsToPlaylist = currentPl
+                        },
+                        onRemoveSongFromPlaylist = { song ->
+                            repository.removeSongFromPlaylist(currentPl.id, song.id)
+                            refreshState++
+                            val updated = repository.getPlaylists().firstOrNull { it.id == currentPl.id }
+                            if (updated != null) {
+                                activeDetail = DetailSelection.PlaylistDetail(updated)
+                            }
+                        }
+                    )
+                }
+                is DetailSelection.AlbumDetail -> {
+                    DetailSheet(
+                        title = detail.album.name,
+                        subtitle = "Album by ${detail.album.artist} • ${detail.album.songCount} songs",
+                        songs = detail.album.songs,
+                        onSongClick = { song ->
+                            onSongSelected(song)
+                            activeDetail = null
+                        },
+                        onToggleLike = { song ->
+                            repository.toggleLike(song.id)
+                            refreshState++
+                        },
+                        onClose = { activeDetail = null }
+                    )
+                }
+                is DetailSelection.ArtistDetail -> {
+                    DetailSheet(
+                        title = detail.artist.name,
+                        subtitle = "${detail.artist.songCount} songs • ${detail.artist.albumCount} albums",
+                        songs = detail.artist.songs,
+                        onSongClick = { song ->
+                            onSongSelected(song)
+                            activeDetail = null
+                        },
+                        onToggleLike = { song ->
+                            repository.toggleLike(song.id)
+                            refreshState++
+                        },
+                        onClose = { activeDetail = null }
+                    )
+                }
+            }
+        }
+
+        // Dialogs & Sheets (Placed above activeDetail in Z-index stack so they appear ON TOP)
         if (showSortDialog) {
             SortDialog(
                 currentSortOption = currentSortOption,
@@ -343,72 +418,6 @@ fun LibraryScreen(
                 },
                 onDismiss = { addingSongsToPlaylist = null }
             )
-        }
-
-        activeDetail?.let { detail ->
-            when (detail) {
-                is DetailSelection.PlaylistDetail -> {
-                    val currentPl = playlists.firstOrNull { it.id == detail.playlist.id } ?: detail.playlist
-                    DetailSheet(
-                        title = currentPl.name,
-                        subtitle = "${currentPl.songCount} songs" + if (currentPl.description.isNotBlank()) " • ${currentPl.description}" else "",
-                        songs = currentPl.songs,
-                        onSongClick = { song ->
-                            onSongSelected(song)
-                            activeDetail = null
-                        },
-                        onToggleLike = { song ->
-                            repository.toggleLike(song.id)
-                            refreshState++
-                        },
-                        onClose = { activeDetail = null },
-                        isPlaylist = currentPl.id != "liked_songs",
-                        onAddSongsToPlaylist = {
-                            addingSongsToPlaylist = currentPl
-                        },
-                        onRemoveSongFromPlaylist = { song ->
-                            repository.removeSongFromPlaylist(currentPl.id, song.id)
-                            refreshState++
-                            val updated = repository.getPlaylists().firstOrNull { it.id == currentPl.id }
-                            if (updated != null) {
-                                activeDetail = DetailSelection.PlaylistDetail(updated)
-                            }
-                        }
-                    )
-                }
-                is DetailSelection.AlbumDetail -> {
-                    DetailSheet(
-                        title = detail.album.name,
-                        subtitle = "Album by ${detail.album.artist} • ${detail.album.songCount} songs",
-                        songs = detail.album.songs,
-                        onSongClick = { song ->
-                            onSongSelected(song)
-                            activeDetail = null
-                        },
-                        onToggleLike = { song ->
-                            repository.toggleLike(song.id)
-                            refreshState++
-                        },
-                        onClose = { activeDetail = null }
-                    )
-                }
-                is DetailSelection.ArtistDetail -> {
-                    DetailSheet(
-                        title = detail.artist.name,
-                        subtitle = "${detail.artist.songCount} songs • ${detail.artist.albumCount} albums",
-                        songs = detail.artist.songs,
-                        onSongClick = { song ->
-                            onSongSelected(song)
-                            activeDetail = null
-                        },
-                        onToggleLike = { song ->
-                            repository.toggleLike(song.id)
-                            refreshState++
-                        },
-                        onClose = { activeDetail = null }
-                    )
-                }
-            }
         }
     }
 }

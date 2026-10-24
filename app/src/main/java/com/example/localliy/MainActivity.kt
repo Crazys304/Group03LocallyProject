@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -21,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.localliy.data.model.Song
 import com.example.localliy.data.repository.MusicRepository
@@ -59,57 +61,60 @@ fun MainAppScreen() {
     }
     var isPlaying by remember { mutableStateOf(false) }
     var progress by remember { mutableFloatStateOf(0.42f) }
+    var isBottomBarVisible by remember { mutableStateOf(true) }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = Color(0xFF0F1215),
         bottomBar = {
-            Column {
-                currentSong?.let { song ->
-                    MiniPlayer(
-                        currentSong = song,
-                        isPlaying = isPlaying,
-                        progress = progress,
-                        onPlayPauseToggle = { isPlaying = !isPlaying },
-                        onSkipNext = {
-                            val all = musicRepository.getSongs()
-                            if (all.isNotEmpty()) {
-                                val currentIndex = all.indexOfFirst { it.id == song.id }
-                                val nextIndex = if (currentIndex != -1 && currentIndex + 1 < all.size) currentIndex + 1 else 0
-                                currentSong = all[nextIndex]
+            if (isBottomBarVisible) {
+                Column {
+                    currentSong?.let { song ->
+                        MiniPlayer(
+                            currentSong = song,
+                            isPlaying = isPlaying,
+                            progress = progress,
+                            onPlayPauseToggle = { isPlaying = !isPlaying },
+                            onSkipNext = {
+                                val all = musicRepository.getSongs()
+                                if (all.isNotEmpty()) {
+                                    val currentIndex = all.indexOfFirst { it.id == song.id }
+                                    val nextIndex = if (currentIndex != -1 && currentIndex + 1 < all.size) currentIndex + 1 else 0
+                                    currentSong = all[nextIndex]
+                                }
+                            },
+                            onSkipPrevious = {
+                                val all = musicRepository.getSongs()
+                                if (all.isNotEmpty()) {
+                                    val currentIndex = all.indexOfFirst { it.id == song.id }
+                                    val prevIndex = if (currentIndex > 0) currentIndex - 1 else all.size - 1
+                                    currentSong = all[prevIndex]
+                                }
+                            },
+                            onToggleLike = { target ->
+                                musicRepository.toggleLike(target.id)
+                                songsList = musicRepository.getSongs()
+                                if (currentSong?.id == target.id) {
+                                    currentSong = currentSong?.copy(isLiked = !target.isLiked)
+                                }
                             }
-                        },
-                        onSkipPrevious = {
-                            val all = musicRepository.getSongs()
-                            if (all.isNotEmpty()) {
-                                val currentIndex = all.indexOfFirst { it.id == song.id }
-                                val prevIndex = if (currentIndex > 0) currentIndex - 1 else all.size - 1
-                                currentSong = all[prevIndex]
-                            }
-                        },
-                        onToggleLike = { target ->
-                            musicRepository.toggleLike(target.id)
-                            songsList = musicRepository.getSongs()
-                            if (currentSong?.id == target.id) {
-                                currentSong = currentSong?.copy(isLiked = !target.isLiked)
-                            }
+                        )
+                    }
+
+                    LocalliyBottomNavBar(
+                        selectedDestination = selectedDestination,
+                        onDestinationSelected = { destination ->
+                            selectedDestination = destination
                         }
                     )
                 }
-
-                LocalliyBottomNavBar(
-                    selectedDestination = selectedDestination,
-                    onDestinationSelected = { destination ->
-                        selectedDestination = destination
-                    }
-                )
             }
         }
     ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .padding(if (isBottomBarVisible) innerPadding else PaddingValues(0.dp))
         ) {
             when (selectedDestination) {
                 NavDestination.LIBRARY -> {
@@ -118,6 +123,9 @@ fun MainAppScreen() {
                         onSongSelected = { song ->
                             currentSong = song
                             isPlaying = true
+                        },
+                        onBottomBarVisibilityChanged = { visible ->
+                            isBottomBarVisible = visible
                         }
                     )
                 }
