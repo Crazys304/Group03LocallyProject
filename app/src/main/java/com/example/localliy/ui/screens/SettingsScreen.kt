@@ -7,6 +7,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,42 +26,80 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.localliy.ui.theme.AccentColor
 import com.example.localliy.ui.theme.AppThemeMode
 import com.example.localliy.ui.theme.ThemeState
+import kotlin.math.ceil
+
+@Composable
+fun TranslucentCheckerboardBackground(
+    modifier: Modifier = Modifier,
+    squareSizeDp: Dp = 6.dp
+) {
+    val isDark = isSystemInDarkTheme()
+    val color1 = if (isDark) Color(0xFF2A2E33) else Color(0xFFE2E8F0)
+    val color2 = if (isDark) Color(0xFF1E2227) else Color(0xFFCBD5E1)
+
+    Canvas(modifier = modifier) {
+        val squareSizePx = squareSizeDp.toPx()
+        val numCols = ceil(size.width / squareSizePx).toInt()
+        val numRows = ceil(size.height / squareSizePx).toInt()
+
+        for (row in 0 until numRows) {
+            for (col in 0 until numCols) {
+                val color = if ((row + col) % 2 == 0) color1 else color2
+                drawRect(
+                    color = color,
+                    topLeft = Offset(col * squareSizePx, row * squareSizePx),
+                    size = Size(squareSizePx, squareSizePx)
+                )
+            }
+        }
+    }
+}
 
 @Composable
 fun SettingsScreen(
     themeState: ThemeState,
     onThemeModeSelected: (AppThemeMode) -> Unit,
     onAccentColorSelected: (AccentColor) -> Unit,
+    onCustomAccentColorSelected: (Color) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
 
     var isThemeExpanded by rememberSaveable { mutableStateOf(false) }
-    var isAccentExpanded by rememberSaveable { mutableStateOf(false) }
+    var isAccentExpanded by rememberSaveable { mutableStateOf(true) }
 
     Column(
         modifier = modifier
@@ -163,7 +202,7 @@ fun SettingsScreen(
             }
         }
 
-        // Section 2: Accent Color Box
+        // Section 2: Accent Color Box (RGB + Custom)
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
@@ -175,6 +214,8 @@ fun SettingsScreen(
             Column(
                 modifier = Modifier.padding(16.dp)
             ) {
+                val currentAccentColor = if (themeState.accentColor == AccentColor.CUSTOM) themeState.customAccentColor else themeState.accentColor.defaultColor
+
                 // Header Row (Clickable)
                 Row(
                     modifier = Modifier
@@ -201,7 +242,7 @@ fun SettingsScreen(
                                 modifier = Modifier
                                     .size(12.dp)
                                     .clip(CircleShape)
-                                    .background(themeState.accentColor.previewColor)
+                                    .background(currentAccentColor)
                             )
                             Text(
                                 text = themeState.accentColor.displayName,
@@ -216,14 +257,15 @@ fun SettingsScreen(
                 AnimatedVisibility(visible = isAccentExpanded) {
                     Column(
                         modifier = Modifier.padding(top = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         Text(
-                            text = "Choose primary color for actions and highlights",
+                            text = "Select Red, Green, Blue, or pick a Custom accent color",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
+                        // Swatches (Red, Green, Blue, Custom)
                         FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -231,6 +273,7 @@ fun SettingsScreen(
                         ) {
                             AccentColor.entries.forEach { accent ->
                                 val isSelected = themeState.accentColor == accent
+                                val swatchColor = if (accent == AccentColor.CUSTOM) themeState.customAccentColor else accent.defaultColor
                                 val animatedBorderColor by animateColorAsState(
                                     targetValue = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
                                     label = "border_color"
@@ -252,17 +295,29 @@ fun SettingsScreen(
                                                 shape = CircleShape
                                             )
                                             .padding(4.dp)
-                                            .clip(CircleShape)
-                                            .background(accent.previewColor),
+                                            .clip(CircleShape),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        if (isSelected) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(12.dp)
-                                                    .clip(CircleShape)
-                                                    .background(Color.White)
-                                            )
+                                        // PNG Checkerboard Background
+                                        TranslucentCheckerboardBackground(
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+
+                                        // Color Overlay
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .background(swatchColor),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            if (isSelected) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(12.dp)
+                                                        .clip(CircleShape)
+                                                        .background(Color.White)
+                                                )
+                                            }
                                         }
                                     }
                                     Spacer(modifier = Modifier.height(4.dp))
@@ -273,6 +328,184 @@ fun SettingsScreen(
                                         color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
+                            }
+                        }
+
+                        // Custom Color Controls (shown when CUSTOM is selected)
+                        AnimatedVisibility(visible = themeState.accentColor == AccentColor.CUSTOM) {
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                HorizontalDivider(
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                )
+
+                                Text(
+                                    text = "Custom RGB Sliders & Hex Input",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+
+                                // Quick Presets
+                                val customPresets = listOf(
+                                    Color(0xFF8B5CF6), // Purple
+                                    Color(0xFFEC4899), // Pink
+                                    Color(0xFF06B6D4), // Cyan
+                                    Color(0xFFF97316), // Orange
+                                    Color(0xFFEAB308), // Yellow
+                                    Color(0xFF14B8A6)  // Teal
+                                )
+
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Presets:",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    customPresets.forEach { color ->
+                                        Box(
+                                            modifier = Modifier
+                                                .size(28.dp)
+                                                .clip(CircleShape)
+                                                .background(color)
+                                                .clickable { onCustomAccentColorSelected(color) }
+                                        )
+                                    }
+                                }
+
+                                // Color Channels
+                                val currentRed = (themeState.customAccentColor.red * 255).toInt()
+                                val currentGreen = (themeState.customAccentColor.green * 255).toInt()
+                                val currentBlue = (themeState.customAccentColor.blue * 255).toInt()
+
+                                // Red Slider
+                                Column {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = "Red Channel",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = currentRed.toString(),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.Red
+                                        )
+                                    }
+                                    Slider(
+                                        value = currentRed.toFloat(),
+                                        onValueChange = { newRed ->
+                                            onCustomAccentColorSelected(
+                                                Color(newRed.toInt(), currentGreen, currentBlue)
+                                            )
+                                        },
+                                        valueRange = 0f..255f,
+                                        colors = SliderDefaults.colors(
+                                            thumbColor = Color.Red,
+                                            activeTrackColor = Color.Red
+                                        )
+                                    )
+                                }
+
+                                // Green Slider
+                                Column {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = "Green Channel",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = currentGreen.toString(),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF22C55E)
+                                        )
+                                    }
+                                    Slider(
+                                        value = currentGreen.toFloat(),
+                                        onValueChange = { newGreen ->
+                                            onCustomAccentColorSelected(
+                                                Color(currentRed, newGreen.toInt(), currentBlue)
+                                            )
+                                        },
+                                        valueRange = 0f..255f,
+                                        colors = SliderDefaults.colors(
+                                            thumbColor = Color(0xFF22C55E),
+                                            activeTrackColor = Color(0xFF22C55E)
+                                        )
+                                    )
+                                }
+
+                                // Blue Slider
+                                Column {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = "Blue Channel",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = currentBlue.toString(),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF3B82F6)
+                                        )
+                                    }
+                                    Slider(
+                                        value = currentBlue.toFloat(),
+                                        onValueChange = { newBlue ->
+                                            onCustomAccentColorSelected(
+                                                Color(currentRed, currentGreen, newBlue.toInt())
+                                            )
+                                        },
+                                        valueRange = 0f..255f,
+                                        colors = SliderDefaults.colors(
+                                            thumbColor = Color(0xFF3B82F6),
+                                            activeTrackColor = Color(0xFF3B82F6)
+                                        )
+                                    )
+                                }
+
+                                // Hex Input Field
+                                var hexText by remember(themeState.customAccentColor) {
+                                    mutableStateOf(
+                                        String.format("#%06X", 0xFFFFFF and themeState.customAccentColor.toArgb())
+                                    )
+                                }
+
+                                OutlinedTextField(
+                                    value = hexText,
+                                    onValueChange = { input ->
+                                        hexText = input
+                                        val cleanHex = input.removePrefix("#").trim()
+                                        if (cleanHex.length == 6) {
+                                            runCatching {
+                                                val parsedInt = cleanHex.toLong(16).toInt()
+                                                val color = Color(0xFF000000 or parsedInt.toLong())
+                                                onCustomAccentColorSelected(color)
+                                            }
+                                        }
+                                    },
+                                    label = { Text("Hex Color Code (#RRGGBB)") },
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
                             }
                         }
                     }

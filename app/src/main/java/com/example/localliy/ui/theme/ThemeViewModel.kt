@@ -1,6 +1,7 @@
 package com.example.localliy.ui.theme
 
 import android.app.Application
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.AndroidViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,5 +21,14 @@ class ThemeViewModel(application: Application) : AndroidViewModel(application) {
     fun setAccentColor(accentColor: AccentColor) {
         prefsManager.accentColor = accentColor
         _themeState.value = _themeState.value.copy(accentColor = accentColor)
+    }
+
+    fun setCustomAccentColor(color: Color) {
+        prefsManager.customAccentColor = color
+        prefsManager.accentColor = AccentColor.CUSTOM
+        _themeState.value = _themeState.value.copy(
+            accentColor = AccentColor.CUSTOM,
+            customAccentColor = color
+        )
     }
 }

@@ -3,6 +3,7 @@ package com.example.localliy.ui.theme
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.edit
 
 enum class AppThemeMode(val label: String) {
@@ -13,19 +14,18 @@ enum class AppThemeMode(val label: String) {
 
 enum class AccentColor(
     val displayName: String,
-    val previewColor: Color
+    val defaultColor: Color
 ) {
+    RED("Red", Color(0xFFEF4444)),
     GREEN("Green", Color(0xFF22C55E)),
-    PURPLE("Purple", Color(0xFF8B5CF6)),
     BLUE("Blue", Color(0xFF3B82F6)),
-    TEAL("Teal", Color(0xFF14B8A6)),
-    ORANGE("Orange", Color(0xFFF97316)),
-    RED("Red", Color(0xFFEF4444))
+    CUSTOM("Custom", Color(0xFF8B5CF6))
 }
 
 data class ThemeState(
     val themeMode: AppThemeMode = AppThemeMode.SYSTEM,
-    val accentColor: AccentColor = AccentColor.GREEN
+    val accentColor: AccentColor = AccentColor.GREEN,
+    val customAccentColor: Color = Color(0xFF8B5CF6)
 )
 
 class ThemePreferencesManager(context: Context) {
@@ -49,12 +49,26 @@ class ThemePreferencesManager(context: Context) {
             prefs.edit { putString(KEY_ACCENT_COLOR, value.name) }
         }
 
+    var customAccentColor: Color
+        get() {
+            val colorInt = prefs.getInt(KEY_CUSTOM_ACCENT_COLOR, Color(0xFF8B5CF6).toArgb())
+            return Color(colorInt)
+        }
+        set(value) {
+            prefs.edit { putInt(KEY_CUSTOM_ACCENT_COLOR, value.toArgb()) }
+        }
+
     fun getThemeState(): ThemeState {
-        return ThemeState(themeMode = themeMode, accentColor = accentColor)
+        return ThemeState(
+            themeMode = themeMode,
+            accentColor = accentColor,
+            customAccentColor = customAccentColor
+        )
     }
 
     companion object {
         private const val KEY_THEME_MODE = "theme_mode"
         private const val KEY_ACCENT_COLOR = "accent_color"
+        private const val KEY_CUSTOM_ACCENT_COLOR = "custom_accent_color"
     }
 }

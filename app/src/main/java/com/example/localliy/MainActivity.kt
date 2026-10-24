@@ -17,6 +17,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.localliy.ui.components.LocalliyBottomNavBar
 import com.example.localliy.ui.components.NavDestination
@@ -40,12 +41,14 @@ class MainActivity : ComponentActivity() {
 
             LocalliyTheme(
                 themeMode = themeState.themeMode,
-                accentColor = themeState.accentColor
+                accentColor = themeState.accentColor,
+                customAccentColor = themeState.customAccentColor
             ) {
                 MainAppScreen(
                     themeState = themeState,
                     onThemeModeSelected = { themeViewModel.setThemeMode(it) },
-                    onAccentColorSelected = { themeViewModel.setAccentColor(it) }
+                    onAccentColorSelected = { themeViewModel.setAccentColor(it) },
+                    onCustomAccentColorSelected = { themeViewModel.setCustomAccentColor(it) }
                 )
             }
         }
@@ -56,7 +59,8 @@ class MainActivity : ComponentActivity() {
 fun MainAppScreen(
     themeState: ThemeState = ThemeState(),
     onThemeModeSelected: (AppThemeMode) -> Unit = {},
-    onAccentColorSelected: (AccentColor) -> Unit = {}
+    onAccentColorSelected: (AccentColor) -> Unit = {},
+    onCustomAccentColorSelected: (Color) -> Unit = {}
 ) {
     var selectedDestination by remember { mutableStateOf(NavDestination.HOME) }
 
@@ -83,7 +87,8 @@ fun MainAppScreen(
                 NavDestination.SETTINGS -> SettingsScreen(
                     themeState = themeState,
                     onThemeModeSelected = onThemeModeSelected,
-                    onAccentColorSelected = onAccentColorSelected
+                    onAccentColorSelected = onAccentColorSelected,
+                    onCustomAccentColorSelected = onCustomAccentColorSelected
                 )
             }
         }
