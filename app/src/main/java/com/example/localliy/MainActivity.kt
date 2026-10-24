@@ -100,9 +100,12 @@ fun MainAppScreen() {
         if (queue.isEmpty()) return
 
         val song = currentSong
-        if (repeatMode == RepeatMode.REPEAT_ONE && song != null) {
-            // Replay same song
-            currentSong = song.copy()
+
+        if (repeatMode == RepeatMode.REPEAT_ONE) {
+            try {
+                mediaPlayer.seekTo(0)
+                if (isPlaying) mediaPlayer.start()
+            } catch (_: Exception) {}
             return
         }
 
@@ -127,6 +130,14 @@ fun MainAppScreen() {
         if (queue.isEmpty()) return
 
         val song = currentSong
+        if (repeatMode == RepeatMode.REPEAT_ONE) {
+            try {
+                mediaPlayer.seekTo(0)
+                if (isPlaying) mediaPlayer.start()
+            } catch (_: Exception) {}
+            return
+        }
+
         if (isShuffleEnabled) {
             currentSong = queue.random()
         } else {
@@ -163,6 +174,13 @@ fun MainAppScreen() {
         }
     }
 
+    // Synchronize MediaPlayer looping state when repeatMode changes
+    LaunchedEffect(repeatMode) {
+        try {
+            mediaPlayer.isLooping = (repeatMode == RepeatMode.REPEAT_ONE)
+        } catch (_: Exception) {}
+    }
+
     // Audio Playback Controller
     LaunchedEffect(currentSong) {
         val song = currentSong
@@ -170,13 +188,16 @@ fun MainAppScreen() {
             try {
                 mediaPlayer.reset()
                 mediaPlayer.setDataSource(context, Uri.parse(song.contentUri))
+                mediaPlayer.isLooping = (repeatMode == RepeatMode.REPEAT_ONE)
                 mediaPlayer.prepare()
                 if (isPlaying) {
                     mediaPlayer.start()
                 }
 
                 mediaPlayer.setOnCompletionListener {
-                    playNextTrack()
+                    if (repeatMode != RepeatMode.REPEAT_ONE) {
+                        playNextTrack()
+                    }
                 }
             } catch (_: Exception) {
                 // Audio file playback error
