@@ -52,6 +52,8 @@ import com.example.localliy.ui.components.NavDestination
 
 import com.example.localliy.ui.screens.HomeScreen
 
+import com.example.localliy.ui.screens.LibraryScreen
+import com.example.localliy.ui.screens.SettingsScreen
 import com.example.localliy.ui.theme.AccentColor
 import com.example.localliy.ui.theme.AppThemeMode
 
@@ -93,6 +95,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
+
 fun MainAppScreen(
     themeState: ThemeState = ThemeState(),
     onThemeModeSelected: (AppThemeMode) -> Unit = {},
@@ -325,10 +328,16 @@ fun MainAppScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-
                 .padding(if (isBottomBarVisible) innerPadding else PaddingValues(0.dp))
         ) {
             when (selectedDestination) {
+                NavDestination.HOME -> {
+                    HomeScreen(
+                        onItemClick = { clickedItemName ->
+                            Toast.makeText(context, "Clicked: $clickedItemName", Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                }
                 NavDestination.LIBRARY -> {
                     LibraryScreen(
                         repository = musicRepository,
@@ -363,18 +372,6 @@ fun MainAppScreen(
                             isBottomBarVisible = visible
                         }
                     )
-                }
-                NavDestination.HOME -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Home Screen",
-                            color = Color.White,
-                            fontSize = 24.sp
-                        )
-                    }
                 }
                 NavDestination.SETTINGS -> {
                     SettingsScreen(
