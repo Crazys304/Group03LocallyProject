@@ -16,9 +16,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.FolderSpecial
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -167,10 +170,6 @@ fun LibraryScreen(
                 onOpenSortDialog = { showSortDialog = true },
                 onScanLocalFiles = {
                     permissionLauncher.launch(permissionToRequest)
-                },
-                onCreatePlaylist = {
-                    editingPlaylist = null
-                    showCreateOrEditPlaylistDialog = true
                 }
             )
 
@@ -276,7 +275,7 @@ fun LibraryScreen(
                                 onSongSelected(song)
                             },
                             onToggleLike = { song ->
-                                repository.toggleLike(song.id)
+                                repository.toggleLike(song.id, context)
                                 onSongLikedToggle(song)
                                 refreshState++
                             },
@@ -290,6 +289,28 @@ fun LibraryScreen(
                         )
                     }
                 }
+            }
+        }
+
+        // Floating Action Button for creating playlist in the playlist section
+        if (selectedCategory == LibraryCategory.PLAYLISTS && activeDetail == null && !isMusicToPlaylistSelectionOpen && !showCreateOrEditPlaylistDialog && !showSortDialog && !isSearchActive) {
+            FloatingActionButton(
+                onClick = {
+                    editingPlaylist = null
+                    showCreateOrEditPlaylistDialog = true
+                },
+                containerColor = ActiveGreen,
+                contentColor = Color.Black,
+                shape = CircleShape,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Create Playlist",
+                    modifier = Modifier.size(28.dp)
+                )
             }
         }
 
@@ -312,7 +333,7 @@ fun LibraryScreen(
                             onSongSelected(song)
                         },
                         onToggleLike = { song ->
-                            repository.toggleLike(song.id)
+                            repository.toggleLike(song.id, context)
                             onSongLikedToggle(song)
                             refreshState++
                         },
@@ -332,21 +353,22 @@ fun LibraryScreen(
                     )
                 }
                 is DetailSelection.AlbumDetail -> {
+                    val currentAlbum = albums.firstOrNull { it.name == detail.album.name } ?: detail.album
                     DetailSheet(
-                        title = detail.album.name,
-                        subtitle = "Album by ${detail.album.artist} • ${detail.album.songCount} songs",
-                        songs = detail.album.songs,
+                        title = currentAlbum.name,
+                        subtitle = "Album by ${currentAlbum.artist} • ${currentAlbum.songCount} songs",
+                        songs = currentAlbum.songs,
                         isShuffleEnabled = isShuffleEnabled,
                         repeatMode = repeatMode,
                         onToggleShuffle = onToggleShuffle,
                         onToggleRepeat = onToggleRepeat,
                         onPlayAllQueue = onPlayAllQueue,
                         onSongClick = { song ->
-                            onPlayAllQueue(detail.album.songs, detail.album.name)
+                            onPlayAllQueue(currentAlbum.songs, currentAlbum.name)
                             onSongSelected(song)
                         },
                         onToggleLike = { song ->
-                            repository.toggleLike(song.id)
+                            repository.toggleLike(song.id, context)
                             onSongLikedToggle(song)
                             refreshState++
                         },
@@ -354,21 +376,22 @@ fun LibraryScreen(
                     )
                 }
                 is DetailSelection.ArtistDetail -> {
+                    val currentArtist = artists.firstOrNull { it.name == detail.artist.name } ?: detail.artist
                     DetailSheet(
-                        title = detail.artist.name,
-                        subtitle = "${detail.artist.songCount} songs • ${detail.artist.albumCount} albums",
-                        songs = detail.artist.songs,
+                        title = currentArtist.name,
+                        subtitle = "${currentArtist.songCount} songs • ${currentArtist.albumCount} albums",
+                        songs = currentArtist.songs,
                         isShuffleEnabled = isShuffleEnabled,
                         repeatMode = repeatMode,
                         onToggleShuffle = onToggleShuffle,
                         onToggleRepeat = onToggleRepeat,
                         onPlayAllQueue = onPlayAllQueue,
                         onSongClick = { song ->
-                            onPlayAllQueue(detail.artist.songs, detail.artist.name)
+                            onPlayAllQueue(currentArtist.songs, currentArtist.name)
                             onSongSelected(song)
                         },
                         onToggleLike = { song ->
-                            repository.toggleLike(song.id)
+                            repository.toggleLike(song.id, context)
                             onSongLikedToggle(song)
                             refreshState++
                         },
@@ -378,12 +401,12 @@ fun LibraryScreen(
             }
         }
 
-        // Dialogs & Sheets (Placed above activeDetail in Z-index stack so they appear ON TOP)
         if (showSortDialog) {
             SortDialog(
                 currentSortOption = currentSortOption,
                 onSortOptionSelected = { option ->
                     currentSortOption = option
+                    showSortDialog = false
                 },
                 onDismiss = { showSortDialog = false }
             )
@@ -393,16 +416,7 @@ fun LibraryScreen(
             CreateOrEditPlaylistDialog(
                 existingPlaylist = editingPlaylist,
                 onSavePlaylist = { name, description, iconType, gradientColors, customImageUri ->
-                    if (editingPlaylist == null) {
-                        repository.createPlaylist(
-                            context = context,
-                            name = name,
-                            description = description,
-                            iconType = iconType,
-                            gradientColors = gradientColors,
-                            customImageUri = customImageUri
-                        )
-                    } else {
+                    if (editingPlaylist != null) {
                         repository.updatePlaylist(
                             context = context,
                             playlistId = editingPlaylist!!.id,
@@ -411,6 +425,15 @@ fun LibraryScreen(
                             newIconType = iconType,
                             newGradientColors = gradientColors,
                             newCustomImageUri = customImageUri
+                        )
+                    } else {
+                        repository.createPlaylist(
+                            context = context,
+                            name = name,
+                            description = description,
+                            iconType = iconType,
+                            gradientColors = gradientColors,
+                            customImageUri = customImageUri
                         )
                     }
                     refreshState++

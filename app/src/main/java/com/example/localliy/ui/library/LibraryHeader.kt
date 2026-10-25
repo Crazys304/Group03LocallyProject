@@ -46,7 +46,7 @@ fun LibraryHeader(
     onToggleSearch: () -> Unit,
     onOpenSortDialog: () -> Unit,
     onScanLocalFiles: () -> Unit,
-    onCreatePlaylist: () -> Unit,
+    onCreatePlaylist: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var isMenuExpanded by remember { mutableStateOf(false) }
@@ -122,20 +122,6 @@ fun LibraryHeader(
                         onClick = {
                             isMenuExpanded = false
                             onScanLocalFiles()
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("New Playlist", color = Color.White) },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Add,
-                                contentDescription = null,
-                                tint = ActiveGreen
-                            )
-                        },
-                        onClick = {
-                            isMenuExpanded = false
-                            onCreatePlaylist()
                         }
                     )
                 }
