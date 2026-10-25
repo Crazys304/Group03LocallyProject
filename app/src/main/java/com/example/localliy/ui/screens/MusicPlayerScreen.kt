@@ -47,11 +47,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.localliy.R
 import com.example.localliy.data.model.RepeatMode
 import com.example.localliy.data.model.Song
 import java.util.Locale
@@ -175,19 +177,22 @@ fun MusicPlayerScreen(
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                if (!currentSong.albumArtUri.isNullOrBlank()) {
+                val hasArt = !currentSong.albumArtUri.isNullOrBlank() && !currentSong.albumArtUri.endsWith("/0")
+                if (hasArt) {
                     AsyncImage(
                         model = currentSong.albumArtUri,
                         contentDescription = currentSong.title,
                         contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.fillMaxSize(),
+                        error = painterResource(id = R.drawable.ic_music_note),
+                        fallback = painterResource(id = R.drawable.ic_music_note)
                     )
                 } else {
                     Icon(
-                        imageVector = Icons.Default.MusicNote,
+                        painter = painterResource(id = R.drawable.ic_music_note),
                         contentDescription = null,
                         tint = activeGreen,
-                        modifier = Modifier.size(96.dp)
+                        modifier = Modifier.size(64.dp)
                     )
                 }
             }
