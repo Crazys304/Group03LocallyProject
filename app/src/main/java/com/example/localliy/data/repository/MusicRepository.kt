@@ -61,20 +61,25 @@ class MusicRepository {
                 val scanned = mutableListOf<Song>()
                 while (c.moveToNext()) {
                     val id = c.getLong(idColumn)
-                    val title = c.getString(titleColumn) ?: "Unknown Track"
-                    val artist = c.getString(artistColumn) ?: "Unknown Artist"
-                    val album = c.getString(albumColumn) ?: "Unknown Album"
+                    val rawTitle = c.getString(titleColumn) ?: "Unknown Track"
+                    val rawArtist = c.getString(artistColumn) ?: "Unknown Artist"
+                    val rawAlbum = c.getString(albumColumn) ?: "Unknown Album"
                     val duration = c.getLong(durationColumn)
                     val albumId = c.getLong(albumIdColumn)
                     val dataPath = if (dataColumn >= 0) c.getString(dataColumn) ?: "" else ""
 
+                    // Clean & trim metadata strings
+                    val cleanTitle = rawTitle.trim().ifEmpty { "Unknown Track" }
+                    val cleanArtist = if (rawArtist.isBlank() || rawArtist.equals("<unknown>", ignoreCase = true)) "Unknown Artist" else rawArtist.trim()
+                    val cleanAlbum = if (rawAlbum.isBlank() || rawAlbum.equals("<unknown>", ignoreCase = true)) "Unknown Album" else rawAlbum.trim()
+
                     // Filter out WhatsApp voice notes & WhatsApp audio files
                     val isWhatsAppAudio = dataPath.contains("WhatsApp", ignoreCase = true) ||
                             dataPath.contains("com.whatsapp", ignoreCase = true) ||
-                            artist.contains("WhatsApp", ignoreCase = true) ||
-                            album.contains("WhatsApp", ignoreCase = true) ||
-                            title.contains("AUD-", ignoreCase = true) ||
-                            title.contains("PTT-", ignoreCase = true)
+                            cleanArtist.contains("WhatsApp", ignoreCase = true) ||
+                            cleanAlbum.contains("WhatsApp", ignoreCase = true) ||
+                            cleanTitle.contains("AUD-", ignoreCase = true) ||
+                            cleanTitle.contains("PTT-", ignoreCase = true)
 
                     if (isWhatsAppAudio) {
                         continue // Exclude WhatsApp audio
@@ -93,9 +98,9 @@ class MusicRepository {
                     scanned.add(
                         Song(
                             id = "local_$id",
-                            title = title,
-                            artist = if (artist == "<unknown>") "Unknown Artist" else artist,
-                            album = if (album == "<unknown>") "Unknown Album" else album,
+                            title = cleanTitle,
+                            artist = cleanArtist,
+                            album = cleanAlbum,
                             durationMs = if (duration <= 0) 180000L else duration,
                             contentUri = contentUri,
                             albumArtUri = albumArtUri
@@ -150,14 +155,33 @@ class MusicRepository {
 
     fun getAlbums(searchQuery: String = ""): List<Album> {
         val songsList = allSongs
-        val grouped = songsList.groupBy { Pair(it.album, it.artist) }
 
-        val albums = grouped.map { (key, songs) ->
+        // Group songs by normalized album name (trimmed, case-insensitive)
+        val grouped = songsList.groupBy { song ->
+            song.album.trim().ifEmpty { "Unknown Album" }.lowercase()
+        }
+
+        val albums = grouped.map { (_, songs) ->
+            val sampleSong = songs.first()
+            val albumTitle = sampleSong.album.trim().ifEmpty { "Unknown Album" }
+
+            // Extract distinct artists for this album
+            val distinctArtists = songs
+                .map { it.artist.trim() }
+                .filter { it.isNotBlank() && !it.equals("Unknown Artist", ignoreCase = true) }
+                .distinctBy { it.lowercase() }
+
+            val displayArtist = when {
+                distinctArtists.size == 1 -> distinctArtists.first()
+                distinctArtists.size > 1 -> "Various Artists"
+                else -> "Unknown Artist"
+            }
+
             Album(
-                name = key.first,
-                artist = key.second,
+                name = albumTitle,
+                artist = displayArtist,
                 songs = songs.sortedBy { it.title.lowercase() },
-                albumArtUri = songs.firstOrNull { it.albumArtUri != null }?.albumArtUri
+                albumArtUri = songs.firstOrNull { !it.albumArtUri.isNullOrBlank() }?.albumArtUri
             )
         }.sortedBy { it.name.lowercase() }
 
@@ -173,10 +197,11 @@ class MusicRepository {
 
     fun getArtists(searchQuery: String = ""): List<Artist> {
         val songsList = allSongs
-        val groupedByArtist = songsList.groupBy { it.artist }
+        val groupedByArtist = songsList.groupBy { it.artist.trim().lowercase() }
         val albumsList = getAlbums()
 
-        val artists = groupedByArtist.map { (artistName, artistSongs) ->
+        val artists = groupedByArtist.map { (_, artistSongs) ->
+            val artistName = artistSongs.first().artist.trim()
             val artistAlbums = albumsList.filter { it.artist.equals(artistName, ignoreCase = true) }
             Artist(
                 name = artistName,
