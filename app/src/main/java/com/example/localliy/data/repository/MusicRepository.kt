@@ -21,21 +21,52 @@ import androidx.compose.runtime.mutableStateListOf
 
 class MusicRepository {
 
+    private var appContext: Context? = null
     private val localSongs = mutableListOf<Song>()
     private val customPlaylists = mutableListOf<Playlist>()
     private val recentlyPlayedSongs = mutableStateListOf<Song>()
+    private val recentlyPlayedPlaylists = mutableStateListOf<Playlist>()
 
     var isPermissionGranted: Boolean = false
 
     val allSongs: List<Song>
         get() = localSongs
 
-    fun addToRecentlyPlayed(song: Song, context: Context? = null) {
-        recentlyPlayedSongs.removeAll { it.id == song.id }
-        recentlyPlayedSongs.add(0, song)
-        if (recentlyPlayedSongs.size > 20) {
-            recentlyPlayedSongs.removeAt(recentlyPlayedSongs.lastIndex)
+    fun addToRecentlyPlayed(song: Song, context: Context? = null, queueName: String = "Library") {
+        context?.let { appContext = it.applicationContext }
+
+        val isPlaylistQueue = queueName == "Liked Songs" || customPlaylists.any { it.name.equals(queueName, ignoreCase = true) }
+
+        if (isPlaylistQueue) {
+            val playlist = if (queueName == "Liked Songs") {
+                val likedSongs = allSongs.filter { it.isLiked }
+                Playlist(
+                    id = "liked_songs",
+                    name = "Liked Songs",
+                    description = "Your favorited tracks",
+                    songs = likedSongs,
+                    iconType = PlaylistIconType.HEART,
+                    gradientColors = listOf(Color(0xFFA855F7), Color(0xFF6B21A8))
+                )
+            } else {
+                customPlaylists.firstOrNull { it.name.equals(queueName, ignoreCase = true) }
+            }
+
+            if (playlist != null) {
+                recentlyPlayedPlaylists.removeAll { it.id == playlist.id }
+                recentlyPlayedPlaylists.add(0, playlist)
+                if (recentlyPlayedPlaylists.size > 10) {
+                    recentlyPlayedPlaylists.removeAt(recentlyPlayedPlaylists.lastIndex)
+                }
+            }
+        } else {
+            recentlyPlayedSongs.removeIf { it.id == song.id }
+            recentlyPlayedSongs.add(0, song)
+            if (recentlyPlayedSongs.size > 20) {
+                recentlyPlayedSongs.removeAt(recentlyPlayedSongs.lastIndex)
+            }
         }
+
         context?.let { saveRecentlyPlayedToPrefs(it) }
     }
 
@@ -44,7 +75,19 @@ class MusicRepository {
         return (recentlyPlayedSongs + unplayed).take(10)
     }
 
+    fun getRecentlyPlayedItems(): List<Any> {
+        val playlists = recentlyPlayedPlaylists.toList()
+        val songs = localSongs.filterNot { song -> recentlyPlayedSongs.any { it.id == song.id } }
+        val recentSongs = recentlyPlayedSongs.toList() + songs
+
+        val combined = mutableListOf<Any>()
+        combined.addAll(playlists)
+        combined.addAll(recentSongs)
+        return combined.take(10)
+    }
+
     fun saveRecentlyPlayedToPrefs(context: Context) {
+        appContext = context.applicationContext
         try {
             val prefs = context.getSharedPreferences("localliy_playlists", Context.MODE_PRIVATE)
             val jsonArray = JSONArray()
@@ -56,6 +99,7 @@ class MusicRepository {
     }
 
     fun loadRecentlyPlayedFromPrefs(context: Context) {
+        appContext = context.applicationContext
         try {
             val prefs = context.getSharedPreferences("localliy_playlists", Context.MODE_PRIVATE)
             val jsonString = prefs.getString("saved_recently_played_json", null) ?: return
@@ -75,6 +119,7 @@ class MusicRepository {
     }
 
     fun scanLocalAudio(context: Context): Int {
+        appContext = context.applicationContext
         try {
             val projection = arrayOf(
                 MediaStore.Audio.Media._ID,
@@ -157,6 +202,7 @@ class MusicRepository {
                 localSongs.clear()
                 localSongs.addAll(scanned)
             }
+            loadLikedSongsFromPrefs(context)
             loadPlaylistsFromPrefs(context)
             loadRecentlyPlayedFromPrefs(context)
         } catch (_: Exception) {
@@ -166,8 +212,11 @@ class MusicRepository {
     }
 
     fun clearStorageAndReset(context: Context) {
+        appContext = context.applicationContext
         localSongs.clear()
         customPlaylists.clear()
+        recentlyPlayedSongs.clear()
+        recentlyPlayedPlaylists.clear()
         try {
             val prefs = context.getSharedPreferences("localliy_playlists", Context.MODE_PRIVATE)
             prefs.edit().clear().apply()
@@ -291,7 +340,8 @@ class MusicRepository {
 
     fun getCustomPlaylists(): List<Playlist> = customPlaylists
 
-    fun toggleLike(songId: String) {
+    fun toggleLike(songId: String, context: Context? = null) {
+        context?.let { appContext = it.applicationContext }
         val localIndex = localSongs.indexOfFirst { it.id == songId }
         if (localIndex != -1) {
             val song = localSongs[localIndex]
@@ -307,6 +357,8 @@ class MusicRepository {
                     customPlaylists[i] = pl.copy(songs = updatedSongs)
                 }
             }
+
+            appContext?.let { saveLikedSongsToPrefs(it) }
         }
     }
 
@@ -319,6 +371,11 @@ class MusicRepository {
                 customPlaylists[index] = pl.copy(songs = updatedSongs)
             }
         }
+        recentlyPlayedSongs.removeIf { it.id == songId }
+        appContext?.let {
+            saveLikedSongsToPrefs(it)
+            saveRecentlyPlayedToPrefs(it)
+        }
     }
 
     fun createPlaylist(
@@ -330,6 +387,7 @@ class MusicRepository {
         customImageUri: String? = null,
         initialSongs: List<Song> = emptyList()
     ): Playlist {
+        context?.let { appContext = it.applicationContext }
         val newPlaylist = Playlist(
             id = UUID.randomUUID().toString(),
             name = name,
@@ -340,7 +398,7 @@ class MusicRepository {
             gradientColors = gradientColors
         )
         customPlaylists.add(newPlaylist)
-        context?.let { savePlaylistsToPrefs(it) }
+        appContext?.let { savePlaylistsToPrefs(it) }
         return newPlaylist
     }
 
@@ -353,6 +411,7 @@ class MusicRepository {
         newGradientColors: List<Color>,
         newCustomImageUri: String?
     ): Boolean {
+        context?.let { appContext = it.applicationContext }
         val index = customPlaylists.indexOfFirst { it.id == playlistId }
         if (index != -1) {
             val existing = customPlaylists[index]
@@ -363,41 +422,75 @@ class MusicRepository {
                 gradientColors = newGradientColors,
                 customImageUri = newCustomImageUri
             )
-            context?.let { savePlaylistsToPrefs(it) }
+            appContext?.let { savePlaylistsToPrefs(it) }
             return true
         }
         return false
     }
 
     fun deletePlaylist(context: Context? = null, playlistId: String): Boolean {
+        context?.let { appContext = it.applicationContext }
         val removed = customPlaylists.removeIf { it.id == playlistId }
-        if (removed && context != null) {
-            savePlaylistsToPrefs(context)
+        if (removed && appContext != null) {
+            savePlaylistsToPrefs(appContext!!)
         }
         return removed
     }
 
     fun addSongsToPlaylist(context: Context? = null, playlistId: String, songsToAdd: List<Song>) {
+        context?.let { appContext = it.applicationContext }
         val index = customPlaylists.indexOfFirst { it.id == playlistId }
         if (index != -1) {
             val existing = customPlaylists[index]
             val updatedSongs = (existing.songs + songsToAdd).distinctBy { it.id }
             customPlaylists[index] = existing.copy(songs = updatedSongs)
-            context?.let { savePlaylistsToPrefs(it) }
+            appContext?.let { savePlaylistsToPrefs(it) }
         }
     }
 
     fun removeSongFromPlaylist(context: Context? = null, playlistId: String, songId: String) {
+        context?.let { appContext = it.applicationContext }
         val index = customPlaylists.indexOfFirst { it.id == playlistId }
         if (index != -1) {
             val existing = customPlaylists[index]
             val updatedSongs = existing.songs.filterNot { it.id == songId }
             customPlaylists[index] = existing.copy(songs = updatedSongs)
-            context?.let { savePlaylistsToPrefs(it) }
+            appContext?.let { savePlaylistsToPrefs(it) }
         }
     }
 
+    fun saveLikedSongsToPrefs(context: Context) {
+        appContext = context.applicationContext
+        try {
+            val prefs = context.getSharedPreferences("localliy_playlists", Context.MODE_PRIVATE)
+            val likedIds = localSongs.filter { it.isLiked }.map { it.id }.toSet()
+            prefs.edit().putStringSet("liked_song_ids", likedIds).apply()
+        } catch (_: Exception) {}
+    }
+
+    fun loadLikedSongsFromPrefs(context: Context) {
+        appContext = context.applicationContext
+        try {
+            val prefs = context.getSharedPreferences("localliy_playlists", Context.MODE_PRIVATE)
+            val likedIds = prefs.getStringSet("liked_song_ids", emptySet()) ?: emptySet()
+            if (likedIds.isNotEmpty()) {
+                localSongs.forEachIndexed { index, song ->
+                    if (likedIds.contains(song.id)) {
+                        localSongs[index] = song.copy(isLiked = true)
+                    }
+                }
+                customPlaylists.forEachIndexed { i, pl ->
+                    val updatedSongs = pl.songs.map { s ->
+                        if (likedIds.contains(s.id)) s.copy(isLiked = true) else s
+                    }
+                    customPlaylists[i] = pl.copy(songs = updatedSongs)
+                }
+            }
+        } catch (_: Exception) {}
+    }
+
     fun savePlaylistsToPrefs(context: Context) {
+        appContext = context.applicationContext
         try {
             val prefs = context.getSharedPreferences("localliy_playlists", Context.MODE_PRIVATE)
             val jsonArray = JSONArray()
@@ -429,6 +522,7 @@ class MusicRepository {
     }
 
     fun loadPlaylistsFromPrefs(context: Context) {
+        appContext = context.applicationContext
         try {
             val prefs = context.getSharedPreferences("localliy_playlists", Context.MODE_PRIVATE)
             val jsonString = prefs.getString("saved_playlists_json", null) ?: return
@@ -479,6 +573,61 @@ class MusicRepository {
             }
         } catch (_: Exception) {
             // Restore failure
+        }
+    }
+
+    fun saveLastPlaybackState(context: Context, song: Song?, queueName: String, queueType: String, queueId: String) {
+        appContext = context.applicationContext
+        try {
+            val prefs = context.getSharedPreferences("localliy_playlists", Context.MODE_PRIVATE)
+            prefs.edit()
+                .putString("last_played_song_id", song?.id ?: "")
+                .putString("last_queue_name", queueName)
+                .putString("last_queue_type", queueType)
+                .putString("last_queue_id", queueId)
+                .apply()
+        } catch (_: Exception) {}
+    }
+
+    fun getRestoredQueue(context: Context): Pair<List<Song>, String> {
+        appContext = context.applicationContext
+        try {
+            val prefs = context.getSharedPreferences("localliy_playlists", Context.MODE_PRIVATE)
+            val queueType = prefs.getString("last_queue_type", "LIBRARY") ?: "LIBRARY"
+            val queueId = prefs.getString("last_queue_id", "") ?: ""
+            val queueName = prefs.getString("last_queue_name", "Library") ?: "Library"
+
+            val queue = when (queueType) {
+                "PLAYLIST" -> {
+                    if (queueId == "liked_songs") {
+                        allSongs.filter { it.isLiked }
+                    } else {
+                        customPlaylists.firstOrNull { it.id == queueId }?.songs ?: allSongs
+                    }
+                }
+                "ALBUM" -> {
+                    getAlbums().firstOrNull { it.name.equals(queueId, ignoreCase = true) }?.songs ?: allSongs
+                }
+                "ARTIST" -> {
+                    getArtists().firstOrNull { it.name.equals(queueId, ignoreCase = true) }?.songs ?: allSongs
+                }
+                else -> allSongs
+            }
+            return Pair(if (queue.isNotEmpty()) queue else allSongs, queueName)
+        } catch (_: Exception) {
+            return Pair(allSongs, "Library")
+        }
+    }
+
+    fun getLastPlayedSong(context: Context): Song? {
+        appContext = context.applicationContext
+        try {
+            val prefs = context.getSharedPreferences("localliy_playlists", Context.MODE_PRIVATE)
+            val songId = prefs.getString("last_played_song_id", null) ?: return null
+            val restoredQueue = getRestoredQueue(context).first
+            return restoredQueue.firstOrNull { it.id == songId } ?: localSongs.firstOrNull { it.id == songId }
+        } catch (_: Exception) {
+            return null
         }
     }
 }

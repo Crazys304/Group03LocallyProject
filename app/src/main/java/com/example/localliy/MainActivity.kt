@@ -106,11 +106,24 @@ fun MainAppScreen(
     }
 
     var songsList by remember { mutableStateOf(musicRepository.getSongs()) }
-    var activeQueue by remember { mutableStateOf(songsList) }
-    var activeQueueName by remember { mutableStateOf("Library") }
+    val restoredQueuePair = remember {
+        try {
+            musicRepository.getRestoredQueue(context)
+        } catch (_: Exception) {
+            Pair(songsList, "Library")
+        }
+    }
+    var activeQueue by remember { mutableStateOf(restoredQueuePair.first) }
+    var activeQueueName by remember { mutableStateOf(restoredQueuePair.second) }
 
     var currentSong by remember {
-        mutableStateOf<Song?>(songsList.firstOrNull())
+        mutableStateOf<Song?>(
+            try {
+                musicRepository.getLastPlayedSong(context) ?: activeQueue.firstOrNull() ?: songsList.firstOrNull()
+            } catch (_: Exception) {
+                songsList.firstOrNull()
+            }
+        )
     }
     var isPlaying by remember { mutableStateOf(false) }
     var progress by remember { mutableFloatStateOf(0.0f) }
@@ -118,6 +131,24 @@ fun MainAppScreen(
 
     var isShuffleEnabled by remember { mutableStateOf(false) }
     var repeatMode by remember { mutableStateOf(RepeatMode.OFF) }
+
+    // Save last played song and exact queue state when changed
+    LaunchedEffect(currentSong, activeQueueName, activeQueue) {
+        if (currentSong != null) {
+            val qName = activeQueueName
+            val (qType, qId) = when {
+                qName == "Liked Songs" -> Pair("PLAYLIST", "liked_songs")
+                musicRepository.getCustomPlaylists().any { it.name.equals(qName, ignoreCase = true) } -> {
+                    val pl = musicRepository.getCustomPlaylists().first { it.name.equals(qName, ignoreCase = true) }
+                    Pair("PLAYLIST", pl.id)
+                }
+                musicRepository.getAlbums().any { it.name.equals(qName, ignoreCase = true) } -> Pair("ALBUM", qName)
+                musicRepository.getArtists().any { it.name.equals(qName, ignoreCase = true) } -> Pair("ARTIST", qName)
+                else -> Pair("LIBRARY", "")
+            }
+            musicRepository.saveLastPlaybackState(context, currentSong, qName, qType, qId)
+        }
+    }
 
     val isInPreview = androidx.compose.ui.platform.LocalInspectionMode.current
     val mediaPlayer = remember { if (!isInPreview) MediaPlayer() else null }
@@ -290,14 +321,7 @@ fun MainAppScreen(
                             progress = progress,
                             onPlayPauseToggle = { isPlaying = !isPlaying },
                             onSkipNext = { playNextTrack() },
-                            onSkipPrevious = { playPreviousTrack() },
-                            onToggleLike = { target ->
-                                musicRepository.toggleLike(target.id)
-                                songsList = musicRepository.getSongs()
-                                if (currentSong?.id == target.id) {
-                                    currentSong = currentSong?.copy(isLiked = !target.isLiked)
-                                }
-                            }
+                            onSkipPrevious = { playPreviousTrack() }
                         )
                     }
 

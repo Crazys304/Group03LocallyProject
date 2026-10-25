@@ -16,8 +16,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -50,7 +48,6 @@ fun MiniPlayer(
     onPlayPauseToggle: () -> Unit,
     onSkipNext: () -> Unit,
     onSkipPrevious: () -> Unit,
-    onToggleLike: (Song) -> Unit,
     progress: Float = 0.0f,
     onClick: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -117,7 +114,7 @@ fun MiniPlayer(
                 // Action Controls
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     IconButton(
                         onClick = onSkipPrevious,
@@ -127,14 +124,14 @@ fun MiniPlayer(
                             imageVector = Icons.Default.SkipPrevious,
                             contentDescription = "Previous",
                             tint = Color.White,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(22.dp)
                         )
                     }
 
                     // Play/Pause circular button
                     Box(
                         modifier = Modifier
-                            .size(38.dp)
+                            .size(40.dp)
                             .clip(CircleShape)
                             .border(width = 1.5.dp, color = AccentGreen, shape = CircleShape)
                             .background(Color(0xFF1B2320))
@@ -145,7 +142,7 @@ fun MiniPlayer(
                             imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                             contentDescription = if (isPlaying) "Pause" else "Play",
                             tint = Color.White,
-                            modifier = Modifier.size(22.dp)
+                            modifier = Modifier.size(24.dp)
                         )
                     }
 
@@ -157,19 +154,7 @@ fun MiniPlayer(
                             imageVector = Icons.Default.SkipNext,
                             contentDescription = "Next",
                             tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-
-                    IconButton(
-                        onClick = { onToggleLike(currentSong) },
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (currentSong.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                            contentDescription = "Like",
-                            tint = if (currentSong.isLiked) Color(0xFFEF4444) else Color(0xFF9CA3AF),
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 }
