@@ -5,14 +5,12 @@ import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -88,7 +86,7 @@ fun MainAppScreen(
     onCustomAccentColorSelected: (Color) -> Unit = {}
 ) {
     val context = LocalContext.current
-    var selectedDestination by remember { mutableStateOf(NavDestination.LIBRARY) }
+    var selectedDestination by remember { mutableStateOf(NavDestination.HOME) }
     val musicRepository = remember { MusicRepository() }
 
     // Request Notification Permission on Android 13+
@@ -121,7 +119,8 @@ fun MainAppScreen(
     var isShuffleEnabled by remember { mutableStateOf(false) }
     var repeatMode by remember { mutableStateOf(RepeatMode.OFF) }
 
-    val mediaPlayer = remember { MediaPlayer() }
+    val isInPreview = androidx.compose.ui.platform.LocalInspectionMode.current
+    val mediaPlayer = remember { if (!isInPreview) MediaPlayer() else null }
 
     // Next Track Helper with Shuffle & Repeat support
     fun playNextTrack() {
@@ -132,8 +131,8 @@ fun MainAppScreen(
 
         if (repeatMode == RepeatMode.REPEAT_ONE) {
             try {
-                mediaPlayer.seekTo(0)
-                if (isPlaying) mediaPlayer.start()
+                mediaPlayer?.seekTo(0)
+                if (isPlaying) mediaPlayer?.start()
             } catch (_: Exception) {}
             return
         }
@@ -161,8 +160,8 @@ fun MainAppScreen(
         val song = currentSong
         if (repeatMode == RepeatMode.REPEAT_ONE) {
             try {
-                mediaPlayer.seekTo(0)
-                if (isPlaying) mediaPlayer.start()
+                mediaPlayer?.seekTo(0)
+                if (isPlaying) mediaPlayer?.start()
             } catch (_: Exception) {}
             return
         }
@@ -197,7 +196,7 @@ fun MainAppScreen(
 
         onDispose {
             try {
-                mediaPlayer.release()
+                mediaPlayer?.release()
             } catch (_: Exception) {}
             MediaNotificationManager.cancelNotification(context)
         }
@@ -206,14 +205,15 @@ fun MainAppScreen(
     // Synchronize MediaPlayer looping state when repeatMode changes
     LaunchedEffect(repeatMode) {
         try {
-            mediaPlayer.isLooping = (repeatMode == RepeatMode.REPEAT_ONE)
+            mediaPlayer?.isLooping = (repeatMode == RepeatMode.REPEAT_ONE)
         } catch (_: Exception) {}
     }
 
     // Audio Playback Controller
     LaunchedEffect(currentSong) {
         val song = currentSong
-        if (song != null && song.contentUri != null) {
+        if (song != null && song.contentUri != null && mediaPlayer != null) {
+            musicRepository.addToRecentlyPlayed(song, context)
             try {
                 mediaPlayer.reset()
                 mediaPlayer.setDataSource(context, Uri.parse(song.contentUri))
@@ -235,17 +235,19 @@ fun MainAppScreen(
     }
 
     LaunchedEffect(isPlaying) {
-        try {
-            if (isPlaying) {
-                if (!mediaPlayer.isPlaying && currentSong?.contentUri != null) {
-                    mediaPlayer.start()
+        if (mediaPlayer != null) {
+            try {
+                if (isPlaying) {
+                    if (!mediaPlayer.isPlaying && currentSong?.contentUri != null) {
+                        mediaPlayer.start()
+                    }
+                } else {
+                    if (mediaPlayer.isPlaying) {
+                        mediaPlayer.pause()
+                    }
                 }
-            } else {
-                if (mediaPlayer.isPlaying) {
-                    mediaPlayer.pause()
-                }
-            }
-        } catch (_: Exception) {}
+            } catch (_: Exception) {}
+        }
     }
 
     // Sync Notification Status
@@ -266,7 +268,7 @@ fun MainAppScreen(
     LaunchedEffect(isPlaying, currentSong) {
         while (isPlaying) {
             try {
-                if (mediaPlayer.isPlaying && mediaPlayer.duration > 0) {
+                if (mediaPlayer != null && mediaPlayer.isPlaying && mediaPlayer.duration > 0) {
                     progress = mediaPlayer.currentPosition.toFloat() / mediaPlayer.duration.toFloat()
                 }
             } catch (_: Exception) {}
@@ -318,8 +320,34 @@ fun MainAppScreen(
 
                 NavDestination.HOME -> {
                     HomeScreen(
-                        onItemClick = { clickedItemName ->
-                            Toast.makeText(context, "Clicked: $clickedItemName", Toast.LENGTH_SHORT).show()
+                        repository = musicRepository,
+                        isShuffleEnabled = isShuffleEnabled,
+                        repeatMode = repeatMode,
+                        onToggleShuffle = { isShuffleEnabled = !isShuffleEnabled },
+                        onToggleRepeat = {
+                            repeatMode = when (repeatMode) {
+                                RepeatMode.OFF -> RepeatMode.REPEAT_ALL
+                                RepeatMode.REPEAT_ALL -> RepeatMode.REPEAT_ONE
+                                RepeatMode.REPEAT_ONE -> RepeatMode.OFF
+                            }
+                        },
+                        onSongSelected = { song ->
+                            musicRepository.addToRecentlyPlayed(song, context)
+                            currentSong = song
+                            isPlaying = true
+                        },
+                        onSongLikedToggle = { song ->
+                            if (currentSong?.id == song.id) {
+                                currentSong = currentSong?.copy(isLiked = !song.isLiked)
+                            }
+                        },
+                        onPlayAllQueue = { queueSongs, queueTitle ->
+                            if (queueSongs.isNotEmpty()) {
+                                activeQueue = queueSongs
+                                activeQueueName = queueTitle
+                                currentSong = if (isShuffleEnabled) queueSongs.random() else queueSongs.first()
+                                isPlaying = true
+                            }
                         }
                     )
                 }
@@ -346,6 +374,7 @@ fun MainAppScreen(
                             }
                         },
                         onSongSelected = { song ->
+                            musicRepository.addToRecentlyPlayed(song, context)
                             currentSong = song
                             isPlaying = true
                         },
@@ -372,29 +401,13 @@ fun MainAppScreen(
                             currentSong = null
                             isPlaying = false
                             try {
-                                mediaPlayer.reset()
+                                mediaPlayer?.reset()
                             } catch (_: Exception) {}
                         }
                     )
                 }
             }
         }
-    }
-}
-
-@Composable
-fun SimplePlaceholderScreen(title: String) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFF0D1013)),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = title,
-            color = Color.White,
-            fontSize = 22.sp
-        )
     }
 }
 

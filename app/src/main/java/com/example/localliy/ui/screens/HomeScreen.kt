@@ -1,7 +1,6 @@
 package com.example.localliy.ui.screens
 
-
-import androidx.annotation.DrawableRes
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,191 +20,271 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.localliy.R
+import com.example.localliy.data.model.Playlist
+import com.example.localliy.data.model.PlaylistIconType
+import com.example.localliy.data.model.RepeatMode
+import com.example.localliy.data.model.Song
+import com.example.localliy.data.repository.MusicRepository
+import com.example.localliy.ui.library.AddSongsToPlaylistDialog
+import com.example.localliy.ui.library.DetailSheet
 
-// ============================================================================
-// 1. DATA MODELS & HARDCODED DATA
-//    CHANGE PLAYLIST / RECENTLY PLAYED NAMES, SONGS & ICONS HERE
-// ============================================================================
-
-data class RecentlyPlayedData(
-    val title: String,
-    val subtitle: String,
-    @param:DrawableRes val iconRes: Int,
-    val gradientColors: List<Color>
+// Preset gradient colors for cards when album art is unavailable
+private val CardGradients = listOf(
+    listOf(Color(0xFF334636), Color(0xFF19231B)),
+    listOf(Color(0xFF3F4638), Color(0xFF1E241B)),
+    listOf(Color(0xFF2B3A44), Color(0xFF161E23)),
+    listOf(Color(0xFF4A3428), Color(0xFF241812)),
+    listOf(Color(0xFF3D2B48), Color(0xFF1F1526))
 )
-
-data class PlaylistData(
-    val title: String,
-    val subtitle: String,
-    @param:DrawableRes val iconRes: Int,
-    val iconGradient: List<Color>
-)
-
-// List of Recently Played items shown in the horizontal row
-val sampleRecentlyPlayed = listOf(
-    RecentlyPlayedData(
-        title = "Favourite Mix",
-        subtitle = "42 songs",
-        iconRes = R.drawable.ic_music_note, // Replace with custom image/drawable if desired
-        gradientColors = listOf(Color(0xFF334636), Color(0xFF19231B))
-    ),
-    RecentlyPlayedData(
-        title = "Indie Rock",
-        subtitle = "Playlist",
-        iconRes = R.drawable.ic_vinyl, // Replace with custom image/drawable if desired
-        gradientColors = listOf(Color(0xFF3F4638), Color(0xFF1E241B))
-    ),
-    RecentlyPlayedData(
-        title = "Night Drive",
-        subtitle = "28 songs",
-        iconRes = R.drawable.ic_music_note, // Replace with custom image/drawable if desired
-        gradientColors = listOf(Color(0xFF2B3A44), Color(0xFF161E23))
-    )
-)
-
-// List of Playlists shown in the "Your playlists" card
-val samplePlaylists = listOf(
-    PlaylistData(
-        title = "Liked Songs",
-        subtitle = "186 songs",
-        iconRes = R.drawable.ic_heart, // Replace with custom icon or image resource
-        iconGradient = listOf(Color(0xFF8B5342), Color(0xFF523126))
-    ),
-    PlaylistData(
-        title = "Workout",
-        subtitle = "64 songs",
-        iconRes = R.drawable.ic_lightning, // Replace with custom icon or image resource
-        iconGradient = listOf(Color(0xFF7A5638), Color(0xFF47311F))
-    ),
-    PlaylistData(
-        title = "Late Night",
-        subtitle = "31 songs",
-        iconRes = R.drawable.ic_moon, // Replace with custom icon or image resource
-        iconGradient = listOf(Color(0xFF6B5548), Color(0xFF3B2E26))
-    )
-)
-
-// ============================================================================
-// 2. MAIN HOME SCREEN COMPOSABLE
-// ============================================================================
 
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
-    onItemClick: (String) -> Unit = {}
+    repository: MusicRepository,
+    isShuffleEnabled: Boolean = false,
+    repeatMode: RepeatMode = RepeatMode.OFF,
+    onToggleShuffle: () -> Unit = {},
+    onToggleRepeat: () -> Unit = {},
+    onSongSelected: (Song) -> Unit = {},
+    onSongLikedToggle: (Song) -> Unit = {},
+    onPlayAllQueue: (List<Song>, String) -> Unit = { _, _ -> }
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(Color(0xFF0D1013))
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 18.dp, vertical = 16.dp)
-    ) {
-        // --- Header ---
-        Text(
-            text = "Good evening",
-            color = Color.White,
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = "Ready for some music?",
-            color = Color(0xFF9E9E9E),
-            fontSize = 15.sp,
-            modifier = Modifier.padding(top = 4.dp)
-        )
+    val context = LocalContext.current
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedPlaylist by remember { mutableStateOf<Playlist?>(null) }
+    var addingSongsToPlaylist by remember { mutableStateOf<Playlist?>(null) }
 
-        Spacer(modifier = Modifier.height(20.dp))
+    // Intercept Back button when Playlist Detail or Add Songs dialog is open on Home Screen
+    BackHandler(enabled = selectedPlaylist != null || addingSongsToPlaylist != null) {
+        if (addingSongsToPlaylist != null) {
+            addingSongsToPlaylist = null
+        } else {
+            selectedPlaylist = null
+        }
+    }
 
-        // --- Search Bar ---
-        SearchBarUI(onClick = { onItemClick("Search Bar") })
+    // Real-time filtering based on search query
+    val allRecentlyPlayed = repository.getRecentlyPlayedSongs()
+    val recentlyPlayed = if (searchQuery.isBlank()) {
+        allRecentlyPlayed
+    } else {
+        allRecentlyPlayed.filter {
+            it.title.contains(searchQuery, ignoreCase = true) ||
+                    it.artist.contains(searchQuery, ignoreCase = true)
+        }
+    }
 
-        Spacer(modifier = Modifier.height(24.dp))
+    val allPlaylists = repository.getPlaylists()
+    val playlists = if (searchQuery.isBlank()) {
+        allPlaylists
+    } else {
+        allPlaylists.filter {
+            it.name.contains(searchQuery, ignoreCase = true)
+        }
+    }
 
-        // --- Recently Played Section ---
-        Text(
-            text = "Recently played",
-            color = Color.White,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            contentPadding = PaddingValues(end = 8.dp)
+    Box(modifier = modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFF0D1013))
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 18.dp, vertical = 16.dp)
         ) {
-            items(sampleRecentlyPlayed) { item ->
-                RecentlyPlayedCard(
-                    item = item,
-                    onClick = { onItemClick("Recently Played: ${item.title}") }
+            // --- Header ---
+            Text(
+                text = "Good evening",
+                color = Color.White,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "Ready for some music?",
+                color = Color(0xFF9E9E9E),
+                fontSize = 15.sp,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // --- Working Interactive Search Bar ---
+            SearchBarUI(
+                searchQuery = searchQuery,
+                onSearchQueryChange = { searchQuery = it }
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // --- Recently Played Section ---
+            Text(
+                text = "Recently played",
+                color = Color.White,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            if (recentlyPlayed.isNotEmpty()) {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    contentPadding = PaddingValues(end = 8.dp)
+                ) {
+                    items(recentlyPlayed) { song ->
+                        val index = recentlyPlayed.indexOf(song)
+                        val gradient = CardGradients[index % CardGradients.size]
+                        RecentlyPlayedSongCard(
+                            song = song,
+                            gradientColors = gradient,
+                            onClick = {
+                                repository.addToRecentlyPlayed(song, context)
+                                onSongSelected(song)
+                            }
+                        )
+                    }
+                }
+            } else {
+                Text(
+                    text = if (searchQuery.isNotBlank()) "No songs match your search" else "No songs found on device yet",
+                    color = Color(0xFF8E95A2),
+                    fontSize = 14.sp,
+                    modifier = Modifier.padding(vertical = 12.dp)
                 )
             }
+
+            Spacer(modifier = Modifier.height(22.dp))
+
+            // --- Smart Shuffle Banner (Hardcoded UI style as requested) ---
+            SmartShuffleCard(
+                onClick = {
+                    val allSongs = repository.allSongs
+                    if (allSongs.isNotEmpty()) {
+                        onPlayAllQueue(allSongs.shuffled(), "Smart Shuffle")
+                    }
+                }
+            )
+
+            Spacer(modifier = Modifier.height(26.dp))
+
+            // --- Your Playlists Section ---
+            Text(
+                text = "Your playlists",
+                color = Color.White,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            if (playlists.isNotEmpty()) {
+                PlaylistsContainer(
+                    playlists = playlists,
+                    onPlaylistClick = { playlist ->
+                        // Opens Playlist Detail directly on Home Screen
+                        selectedPlaylist = playlist
+                    }
+                )
+            } else {
+                Text(
+                    text = if (searchQuery.isNotBlank()) "No playlists match your search" else "No playlists created yet",
+                    color = Color(0xFF8E95A2),
+                    fontSize = 14.sp,
+                    modifier = Modifier.padding(vertical = 12.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(30.dp))
         }
 
-        Spacer(modifier = Modifier.height(22.dp))
+        // --- Playlist Detail View overlay on Home Screen ---
+        selectedPlaylist?.let { activePlaylist ->
+            val freshPlaylist = repository.getPlaylists().firstOrNull { it.id == activePlaylist.id } ?: activePlaylist
 
-        // --- Smart Shuffle Banner ---
-        SmartShuffleCard(onClick = { onItemClick("Smart Shuffle") })
+            DetailSheet(
+                title = freshPlaylist.name,
+                subtitle = "${freshPlaylist.songs.size} songs" + if (freshPlaylist.description.isNotBlank()) " · ${freshPlaylist.description}" else "",
+                songs = freshPlaylist.songs,
+                onSongClick = { song ->
+                    repository.addToRecentlyPlayed(song, context)
+                    onSongSelected(song)
+                },
+                onPlayAllQueue = onPlayAllQueue,
+                onToggleLike = { song ->
+                    repository.toggleLike(song.id)
+                    onSongLikedToggle(song)
+                },
+                onClose = { selectedPlaylist = null },
+                isPlaylist = true,
+                isShuffleEnabled = isShuffleEnabled,
+                repeatMode = repeatMode,
+                onToggleShuffle = onToggleShuffle,
+                onToggleRepeat = onToggleRepeat,
+                onAddSongsToPlaylist = if (freshPlaylist.id != "liked_songs") {
+                    { addingSongsToPlaylist = freshPlaylist }
+                } else null,
+                onRemoveSongFromPlaylist = if (freshPlaylist.id != "liked_songs") {
+                    { song -> repository.removeSongFromPlaylist(context, freshPlaylist.id, song.id) }
+                } else null
+            )
+        }
 
-        Spacer(modifier = Modifier.height(26.dp))
-
-        // --- Your Playlists Section ---
-        Text(
-            text = "Your playlists",
-            color = Color.White,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        PlaylistsContainer(
-            playlists = samplePlaylists,
-            onPlaylistClick = { playlist -> onItemClick("Playlist: ${playlist.title}") }
-        )
-
-        Spacer(modifier = Modifier.height(30.dp))
+        // --- Add Songs to Playlist Dialog overlay ---
+        addingSongsToPlaylist?.let { targetPlaylist ->
+            AddSongsToPlaylistDialog(
+                playlist = targetPlaylist,
+                allSongs = repository.allSongs,
+                onAddSongs = { selectedSongs ->
+                    repository.addSongsToPlaylist(context, targetPlaylist.id, selectedSongs)
+                    addingSongsToPlaylist = null
+                },
+                onDismiss = { addingSongsToPlaylist = null }
+            )
+        }
     }
 }
 
-// ============================================================================
-// 3. UI COMPONENTS
-// ============================================================================
-
-// --- Search Bar UI ---
+// --- Interactive Search Bar UI ---
 @Composable
-private fun SearchBarUI(onClick: () -> Unit) {
+private fun SearchBarUI(
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(Color(0xFF161A1E))
             .border(1.dp, Color(0xFF252C33), RoundedCornerShape(12.dp))
-            .clickable { onClick() }
-            .padding(horizontal = 14.dp, vertical = 14.dp),
+            .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
@@ -214,19 +293,50 @@ private fun SearchBarUI(onClick: () -> Unit) {
             tint = Color(0xFF8E95A2),
             modifier = Modifier.size(20.dp)
         )
+
         Spacer(modifier = Modifier.width(10.dp))
-        Text(
-            text = "Search your music, playlists...",
-            color = Color(0xFF8E95A2),
-            fontSize = 15.sp
-        )
+
+        Box(modifier = Modifier.weight(1f)) {
+            if (searchQuery.isEmpty()) {
+                Text(
+                    text = "Search your music, playlists...",
+                    color = Color(0xFF8E95A2),
+                    fontSize = 15.sp
+                )
+            }
+            BasicTextField(
+                value = searchQuery,
+                onValueChange = onSearchQueryChange,
+                singleLine = true,
+                cursorBrush = SolidColor(Color.White),
+                textStyle = TextStyle(
+                    color = Color.White,
+                    fontSize = 15.sp
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        if (searchQuery.isNotEmpty()) {
+            IconButton(
+                onClick = { onSearchQueryChange("") },
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Clear search",
+                    tint = Color(0xFF8E95A2)
+                )
+            }
+        }
     }
 }
 
-// --- Recently Played Card UI ---
+// --- Recently Played Song Card UI ---
 @Composable
-private fun RecentlyPlayedCard(
-    item: RecentlyPlayedData,
+private fun RecentlyPlayedSongCard(
+    song: Song,
+    gradientColors: List<Color>,
     onClick: () -> Unit
 ) {
     Column(
@@ -234,34 +344,44 @@ private fun RecentlyPlayedCard(
             .width(112.dp)
             .clickable { onClick() }
     ) {
-        // Gradient Icon Box
         Box(
             modifier = Modifier
                 .size(112.dp)
                 .clip(RoundedCornerShape(16.dp))
-                .background(Brush.verticalGradient(item.gradientColors)),
+                .background(Brush.verticalGradient(gradientColors)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                painter = painterResource(id = item.iconRes),
-                contentDescription = item.title,
-                tint = Color.White,
-                modifier = Modifier.size(32.dp)
-            )
+            if (!song.albumArtUri.isNullOrBlank()) {
+                AsyncImage(
+                    model = song.albumArtUri,
+                    contentDescription = song.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_music_note),
+                    contentDescription = song.title,
+                    tint = Color.White,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
         }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = item.title,
+            text = song.title,
             color = Color.White,
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
-            maxLines = 1
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
         Text(
-            text = item.subtitle,
+            text = song.artist,
             color = Color(0xFF8E95A2),
             fontSize = 12.sp,
-            maxLines = 1
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }
@@ -310,7 +430,6 @@ private fun SmartShuffleCard(onClick: () -> Unit) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Green Pill Tag
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(20.dp))
@@ -327,11 +446,11 @@ private fun SmartShuffleCard(onClick: () -> Unit) {
     }
 }
 
-// --- Your Playlists Container UI ---
+// --- Playlists Container UI ---
 @Composable
 private fun PlaylistsContainer(
-    playlists: List<PlaylistData>,
-    onPlaylistClick: (PlaylistData) -> Unit
+    playlists: List<Playlist>,
+    onPlaylistClick: (Playlist) -> Unit
 ) {
     val containerShape = RoundedCornerShape(18.dp)
 
@@ -343,6 +462,13 @@ private fun PlaylistsContainer(
             .border(1.dp, Color(0xFF22282F), containerShape)
     ) {
         playlists.forEachIndexed { index, playlist ->
+            val iconRes = when (playlist.iconType) {
+                PlaylistIconType.HEART -> R.drawable.ic_heart
+                PlaylistIconType.MOON -> R.drawable.ic_moon
+                PlaylistIconType.FIRE, PlaylistIconType.GYM -> R.drawable.ic_lightning
+                else -> R.drawable.ic_music_note
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -350,40 +476,46 @@ private fun PlaylistsContainer(
                     .padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Playlist Icon Box
                 Box(
                     modifier = Modifier
                         .size(48.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Brush.verticalGradient(playlist.iconGradient)),
+                        .background(Brush.verticalGradient(playlist.gradientColors)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        painter = painterResource(id = playlist.iconRes),
-                        contentDescription = playlist.title,
-                        tint = Color.White,
-                        modifier = Modifier.size(22.dp)
-                    )
+                    if (!playlist.customImageUri.isNullOrBlank()) {
+                        AsyncImage(
+                            model = playlist.customImageUri,
+                            contentDescription = playlist.name,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Icon(
+                            painter = painterResource(id = iconRes),
+                            contentDescription = playlist.name,
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.width(14.dp))
 
-                // Title & Song Count
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = playlist.title,
+                        text = playlist.name,
                         color = Color.White,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = playlist.subtitle,
+                        text = "${playlist.songs.size} songs",
                         color = Color(0xFF8E95A2),
                         fontSize = 13.sp
                     )
                 }
 
-                // Chevron Arrow
                 Icon(
                     painter = painterResource(id = R.drawable.ic_chevron_right),
                     contentDescription = "Open",
@@ -392,7 +524,6 @@ private fun PlaylistsContainer(
                 )
             }
 
-            // Divider between items
             if (index < playlists.lastIndex) {
                 HorizontalDivider(
                     color = Color(0xFF22282F),
@@ -403,4 +534,3 @@ private fun PlaylistsContainer(
         }
     }
 }
-

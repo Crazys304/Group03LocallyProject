@@ -17,15 +17,62 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
 
+import androidx.compose.runtime.mutableStateListOf
+
 class MusicRepository {
 
     private val localSongs = mutableListOf<Song>()
     private val customPlaylists = mutableListOf<Playlist>()
+    private val recentlyPlayedSongs = mutableStateListOf<Song>()
 
     var isPermissionGranted: Boolean = false
 
     val allSongs: List<Song>
         get() = localSongs
+
+    fun addToRecentlyPlayed(song: Song, context: Context? = null) {
+        recentlyPlayedSongs.removeAll { it.id == song.id }
+        recentlyPlayedSongs.add(0, song)
+        if (recentlyPlayedSongs.size > 20) {
+            recentlyPlayedSongs.removeAt(recentlyPlayedSongs.lastIndex)
+        }
+        context?.let { saveRecentlyPlayedToPrefs(it) }
+    }
+
+    fun getRecentlyPlayedSongs(): List<Song> {
+        val unplayed = localSongs.filterNot { song -> recentlyPlayedSongs.any { it.id == song.id } }
+        return (recentlyPlayedSongs + unplayed).take(10)
+    }
+
+    fun saveRecentlyPlayedToPrefs(context: Context) {
+        try {
+            val prefs = context.getSharedPreferences("localliy_playlists", Context.MODE_PRIVATE)
+            val jsonArray = JSONArray()
+            recentlyPlayedSongs.forEach { jsonArray.put(it.id) }
+            prefs.edit().putString("saved_recently_played_json", jsonArray.toString()).apply()
+        } catch (_: Exception) {
+            // Saving failure
+        }
+    }
+
+    fun loadRecentlyPlayedFromPrefs(context: Context) {
+        try {
+            val prefs = context.getSharedPreferences("localliy_playlists", Context.MODE_PRIVATE)
+            val jsonString = prefs.getString("saved_recently_played_json", null) ?: return
+            val jsonArray = JSONArray(jsonString)
+
+            recentlyPlayedSongs.clear()
+            val songsById = localSongs.associateBy { it.id }
+            for (i in 0 until jsonArray.length()) {
+                val id = jsonArray.getString(i)
+                songsById[id]?.let { song ->
+                    recentlyPlayedSongs.add(song)
+                }
+            }
+        } catch (_: Exception) {
+            // Loading failure
+        }
+    }
 
     fun scanLocalAudio(context: Context): Int {
         try {
@@ -111,6 +158,7 @@ class MusicRepository {
                 localSongs.addAll(scanned)
             }
             loadPlaylistsFromPrefs(context)
+            loadRecentlyPlayedFromPrefs(context)
         } catch (_: Exception) {
             // Permission missing or content query error
         }
