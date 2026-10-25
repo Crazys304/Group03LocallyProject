@@ -1,26 +1,35 @@
 package com.example.localliy.ui.screens
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.sp
+import com.example.localliy.data.model.RepeatMode
+import com.example.localliy.data.model.Song
+import com.example.localliy.data.repository.MusicRepository
+import com.example.localliy.ui.library.LibraryScreen
 
 @Composable
 fun LibraryScreen(
+    repository: MusicRepository,
+    onSongSelected: (Song) -> Unit,
+    onPlayAllQueue: (List<Song>, String) -> Unit = { _, _ -> },
+    isShuffleEnabled: Boolean = false,
+    repeatMode: RepeatMode = RepeatMode.OFF,
+    onToggleShuffle: () -> Unit = {},
+    onToggleRepeat: () -> Unit = {},
+    onSongLikedToggle: (Song) -> Unit = {},
+    onBottomBarVisibilityChanged: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "Library Screen",
-            color = MaterialTheme.colorScheme.onBackground,
-            fontSize = 24.sp
-        )
-    }
+    LibraryScreen(
+        repository = repository,
+        onSongSelected = onSongSelected,
+        onPlayAllQueue = onPlayAllQueue,
+        isShuffleEnabled = isShuffleEnabled,
+        repeatMode = repeatMode,
+        onToggleShuffle = onToggleShuffle,
+        onToggleRepeat = onToggleRepeat,
+        onSongLikedToggle = onSongLikedToggle,
+        onBottomBarVisibilityChanged = onBottomBarVisibilityChanged,
+        modifier = modifier
+    )
 }

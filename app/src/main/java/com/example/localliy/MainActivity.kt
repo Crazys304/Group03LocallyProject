@@ -10,12 +10,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-
-import androidx.compose.foundation.background
-import androidx.activity.viewModels
-
 import androidx.activity.result.contract.ActivityResultContracts
-
+import androidx.activity.viewModels
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -25,12 +22,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-
-import androidx.compose.runtime.collectAsState
-
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -49,25 +43,17 @@ import com.example.localliy.data.repository.MusicRepository
 import com.example.localliy.ui.components.LocalliyBottomNavBar
 import com.example.localliy.ui.components.MiniPlayer
 import com.example.localliy.ui.components.NavDestination
-
 import com.example.localliy.ui.screens.HomeScreen
-
 import com.example.localliy.ui.screens.LibraryScreen
 import com.example.localliy.ui.screens.SettingsScreen
 import com.example.localliy.ui.theme.AccentColor
 import com.example.localliy.ui.theme.AppThemeMode
-
 import com.example.localliy.ui.theme.LocalliyTheme
 import com.example.localliy.ui.theme.ThemeState
 import com.example.localliy.ui.theme.ThemeViewModel
-
-import com.example.localliy.ui.library.LibraryScreen
-import com.example.localliy.ui.settings.SettingsScreen
-import com.example.localliy.ui.theme.LocalliyTheme
 import com.example.localliy.util.MediaNotificationManager
 import com.example.localliy.util.PlaybackBroadcastReceiver
 import kotlinx.coroutines.delay
-
 
 class MainActivity : ComponentActivity() {
     private val themeViewModel: ThemeViewModel by viewModels()
@@ -95,7 +81,6 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-
 fun MainAppScreen(
     themeState: ThemeState = ThemeState(),
     onThemeModeSelected: (AppThemeMode) -> Unit = {},
@@ -289,7 +274,6 @@ fun MainAppScreen(
         }
     }
 
-
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
@@ -331,6 +315,7 @@ fun MainAppScreen(
                 .padding(if (isBottomBarVisible) innerPadding else PaddingValues(0.dp))
         ) {
             when (selectedDestination) {
+
                 NavDestination.HOME -> {
                     HomeScreen(
                         onItemClick = { clickedItemName ->
@@ -338,6 +323,7 @@ fun MainAppScreen(
                         }
                     )
                 }
+
                 NavDestination.LIBRARY -> {
                     LibraryScreen(
                         repository = musicRepository,
@@ -373,6 +359,7 @@ fun MainAppScreen(
                         }
                     )
                 }
+
                 NavDestination.SETTINGS -> {
                     SettingsScreen(
                         themeState = themeState,

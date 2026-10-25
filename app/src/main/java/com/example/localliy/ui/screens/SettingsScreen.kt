@@ -1,5 +1,10 @@
 package com.example.localliy.ui.screens
 
+import android.Manifest
+import android.os.Build
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -24,16 +29,29 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material3.BasicAlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -52,10 +70,13 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.localliy.data.repository.MusicRepository
+import com.example.localliy.ui.library.ActiveGreen
 import com.example.localliy.ui.theme.AccentColor
 import com.example.localliy.ui.theme.AppThemeMode
 import com.example.localliy.ui.theme.ThemeState
@@ -88,18 +109,42 @@ fun TranslucentCheckerboardBackground(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    themeState: ThemeState,
-    onThemeModeSelected: (AppThemeMode) -> Unit,
-    onAccentColorSelected: (AccentColor) -> Unit,
-    onCustomAccentColorSelected: (Color) -> Unit,
+    repository: MusicRepository? = null,
+    onStorageCleared: () -> Unit = {},
+    themeState: ThemeState = ThemeState(),
+    onThemeModeSelected: (AppThemeMode) -> Unit = {},
+    onAccentColorSelected: (AccentColor) -> Unit = {},
+    onCustomAccentColorSelected: (Color) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val scrollState = rememberScrollState()
 
     var isThemeExpanded by rememberSaveable { mutableStateOf(false) }
     var isAccentExpanded by rememberSaveable { mutableStateOf(true) }
+    var showClearConfirmDialog by remember { mutableStateOf(false) }
+
+    val permissionToRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        Manifest.permission.READ_MEDIA_AUDIO
+    } else {
+        Manifest.permission.READ_EXTERNAL_STORAGE
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted && repository != null) {
+            repository.isPermissionGranted = true
+            val count = repository.scanLocalAudio(context)
+            Toast.makeText(context, "Scanned $count songs from device storage", Toast.LENGTH_SHORT).show()
+            onStorageCleared()
+        } else {
+            Toast.makeText(context, "Storage permission required to scan songs", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     Column(
         modifier = modifier
@@ -117,7 +162,7 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.onBackground
             )
             Text(
-                text = "Customize app appearance & colors",
+                text = "Customize app appearance, theme & storage",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -135,7 +180,6 @@ fun SettingsScreen(
             Column(
                 modifier = Modifier.padding(16.dp)
             ) {
-                // Header Row (Clickable)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -216,7 +260,6 @@ fun SettingsScreen(
             ) {
                 val currentAccentColor = if (themeState.accentColor == AccentColor.CUSTOM) themeState.customAccentColor else themeState.accentColor.defaultColor
 
-                // Header Row (Clickable)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -265,7 +308,7 @@ fun SettingsScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
-                        // Swatches (Red, Green, Blue, Custom)
+                        // Swatches
                         FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -298,12 +341,10 @@ fun SettingsScreen(
                                             .clip(CircleShape),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        // PNG Checkerboard Background
                                         TranslucentCheckerboardBackground(
                                             modifier = Modifier.fillMaxSize()
                                         )
 
-                                        // Color Overlay
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxSize()
@@ -331,7 +372,7 @@ fun SettingsScreen(
                             }
                         }
 
-                        // Custom Color Controls (shown when CUSTOM is selected)
+                        // Custom Color Controls
                         AnimatedVisibility(visible = themeState.accentColor == AccentColor.CUSTOM) {
                             Column(
                                 verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -348,14 +389,14 @@ fun SettingsScreen(
                                     color = MaterialTheme.colorScheme.primary
                                 )
 
-                                // Quick Presets
+                                // Presets
                                 val customPresets = listOf(
-                                    Color(0xFF8B5CF6), // Purple
-                                    Color(0xFFEC4899), // Pink
-                                    Color(0xFF06B6D4), // Cyan
-                                    Color(0xFFF97316), // Orange
-                                    Color(0xFFEAB308), // Yellow
-                                    Color(0xFF14B8A6)  // Teal
+                                    Color(0xFF8B5CF6),
+                                    Color(0xFFEC4899),
+                                    Color(0xFF06B6D4),
+                                    Color(0xFFF97316),
+                                    Color(0xFFEAB308),
+                                    Color(0xFF14B8A6)
                                 )
 
                                 Row(
@@ -378,7 +419,6 @@ fun SettingsScreen(
                                     }
                                 }
 
-                                // Color Channels
                                 val currentRed = (themeState.customAccentColor.red * 255).toInt()
                                 val currentGreen = (themeState.customAccentColor.green * 255).toInt()
                                 val currentBlue = (themeState.customAccentColor.blue * 255).toInt()
@@ -507,6 +547,209 @@ fun SettingsScreen(
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Section 3: Storage & Library Management
+        repository?.let { repo ->
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.MusicNote,
+                            contentDescription = null,
+                            tint = ActiveGreen,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "Music Library & Storage",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Text(
+                        text = "Scanned Tracks: ${repo.allSongs.size} songs",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                permissionLauncher.launch(permissionToRequest)
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = ActiveGreen,
+                                contentColor = Color.Black
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Rescan", fontWeight = FontWeight.Bold)
+                        }
+
+                        OutlinedButton(
+                            onClick = { showClearConfirmDialog = true },
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = Color(0xFFEF4444)
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.DeleteSweep, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Clear Data", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+
+        // Section 4: WhatsApp Exclusion Filter Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Shield,
+                    contentDescription = null,
+                    tint = ActiveGreen,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "WhatsApp Exclusion Active",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "WhatsApp voice notes and audio clips are automatically excluded from your music library.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        // Section 5: App Info Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    tint = ActiveGreen,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(
+                        text = "Localliy Music Player",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Version 1.0.0 • Offline Storage Player",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+
+    // Clear Confirmation Dialog
+    if (showClearConfirmDialog && repository != null) {
+        BasicAlertDialog(onDismissRequest = { showClearConfirmDialog = false }) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color(0xFF1B2027))
+                    .padding(20.dp)
+            ) {
+                Column {
+                    Text(
+                        text = "Clear Storage & Playlists?",
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "This will wipe all saved custom playlists and clear the scanned library cache. You can rescan your device music anytime.",
+                        color = Color(0xFF9CA3AF),
+                        fontSize = 14.sp
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = { showClearConfirmDialog = false }) {
+                            Text("Cancel", color = Color(0xFF9CA3AF))
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Button(
+                            onClick = {
+                                repository.clearStorageAndReset(context)
+                                showClearConfirmDialog = false
+                                Toast.makeText(context, "Storage and playlists cleared", Toast.LENGTH_SHORT).show()
+                                onStorageCleared()
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFEF4444),
+                                contentColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Clear All", fontWeight = FontWeight.Bold)
                         }
                     }
                 }
