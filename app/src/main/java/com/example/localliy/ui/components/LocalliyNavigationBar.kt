@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -13,7 +14,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -29,11 +29,6 @@ enum class NavDestination(
     SETTINGS("Settings", R.drawable.ic_nav_settings)
 }
 
-val NavGreen = Color(0xFF22C55E)
-val NavInactive = Color(0xFF8E95A2)
-val NavBackground = Color(0xFF13171A)
-val NavBorder = Color(0xFF242B33)
-
 @Composable
 fun LocalliyBottomNavBar(
     selectedDestination: NavDestination,
@@ -41,6 +36,10 @@ fun LocalliyBottomNavBar(
     modifier: Modifier = Modifier
 ) {
     val navShape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+    val containerColor = MaterialTheme.colorScheme.surface
+    val borderColor = MaterialTheme.colorScheme.outlineVariant
+    val selectedColor = MaterialTheme.colorScheme.primary
+    val unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
 
     NavigationBar(
         modifier = modifier
@@ -48,12 +47,12 @@ fun LocalliyBottomNavBar(
             .clip(navShape)
             .border(
                 width = 1.dp,
-                color = NavBorder,
+                color = borderColor,
                 shape = navShape
             )
-            .background(NavBackground),
-        containerColor = NavBackground,
-        contentColor = Color.White,
+            .background(containerColor),
+        containerColor = containerColor,
+        contentColor = MaterialTheme.colorScheme.onSurface,
         tonalElevation = 0.dp
     ) {
         NavDestination.entries.forEach { destination ->
@@ -76,11 +75,11 @@ fun LocalliyBottomNavBar(
                     )
                 },
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = NavGreen,
-                    selectedTextColor = NavGreen,
-                    unselectedIconColor = NavInactive,
-                    unselectedTextColor = NavInactive,
-                    indicatorColor = Color.Transparent
+                    selectedIconColor = selectedColor,
+                    selectedTextColor = selectedColor,
+                    unselectedIconColor = unselectedColor,
+                    unselectedTextColor = unselectedColor,
+                    indicatorColor = selectedColor.copy(alpha = 0.15f)
                 )
             )
         }

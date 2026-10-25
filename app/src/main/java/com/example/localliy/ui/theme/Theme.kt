@@ -1,54 +1,88 @@
 package com.example.localliy.ui.theme
 
-import android.app.Activity
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
-)
+private fun isLightColor(color: Color): Boolean {
+    val luminance = (0.2126f * color.red) + (0.7152f * color.green) + (0.0722f * color.blue)
+    return luminance > 0.6f
+}
 
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
+fun buildColorScheme(primaryColor: Color, darkTheme: Boolean): ColorScheme {
+    val onPrimaryColor = if (isLightColor(primaryColor)) Color.Black else Color.White
 
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
-)
+    return if (darkTheme) {
+        darkColorScheme(
+            primary = primaryColor,
+            onPrimary = onPrimaryColor,
+            primaryContainer = primaryColor.copy(alpha = 0.3f),
+            onPrimaryContainer = Color(0xFFF1F5F9),
+            secondary = primaryColor,
+            onSecondary = onPrimaryColor,
+            tertiary = primaryColor,
+            background = Color(0xFF0F1215),
+            onBackground = Color(0xFFF1F5F9),
+            surface = Color(0xFF161B22),
+            onSurface = Color(0xFFF1F5F9),
+            surfaceVariant = Color(0xFF21262D),
+            onSurfaceVariant = Color(0xFF94A3B8),
+            outline = Color(0xFF334155),
+            outlineVariant = Color(0xFF1E293B)
+        )
+    } else {
+        lightColorScheme(
+            primary = primaryColor,
+            onPrimary = onPrimaryColor,
+            primaryContainer = primaryColor.copy(alpha = 0.15f),
+            onPrimaryContainer = primaryColor,
+            secondary = primaryColor,
+            onSecondary = onPrimaryColor,
+            tertiary = primaryColor,
+            background = Color(0xFFF8FAFC),
+            onBackground = Color(0xFF0F172A),
+            surface = Color(0xFFFFFFFF),
+            onSurface = Color(0xFF0F172A),
+            surfaceVariant = Color(0xFFF1F5F9),
+            onSurfaceVariant = Color(0xFF475569),
+            outline = Color(0xFFCBD5E1),
+            outlineVariant = Color(0xFFE2E8F0)
+        )
+    }
+}
+
+fun getCustomColorScheme(
+    accentColor: AccentColor,
+    customColor: Color,
+    darkTheme: Boolean
+): ColorScheme {
+    val primaryColor = when (accentColor) {
+        AccentColor.RED -> AccentColor.RED.defaultColor
+        AccentColor.GREEN -> AccentColor.GREEN.defaultColor
+        AccentColor.BLUE -> AccentColor.BLUE.defaultColor
+        AccentColor.CUSTOM -> customColor
+    }
+    return buildColorScheme(primaryColor, darkTheme)
+}
 
 @Composable
 fun LocalliyTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    themeMode: AppThemeMode = AppThemeMode.SYSTEM,
+    accentColor: AccentColor = AccentColor.GREEN,
+    customAccentColor: Color = Color(0xFF8B5CF6),
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+    val darkTheme = when (themeMode) {
+        AppThemeMode.SYSTEM -> isSystemInDarkTheme()
+        AppThemeMode.LIGHT -> false
+        AppThemeMode.DARK -> true
     }
+
+    val colorScheme = getCustomColorScheme(accentColor, customAccentColor, darkTheme)
 
     MaterialTheme(
         colorScheme = colorScheme,
