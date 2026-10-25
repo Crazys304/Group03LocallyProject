@@ -11,6 +11,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -25,6 +26,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -43,6 +45,7 @@ import com.example.localliy.ui.components.MiniPlayer
 import com.example.localliy.ui.components.NavDestination
 import com.example.localliy.ui.screens.HomeScreen
 import com.example.localliy.ui.screens.LibraryScreen
+import com.example.localliy.ui.screens.MusicPlayerScreen
 import com.example.localliy.ui.screens.SettingsScreen
 import com.example.localliy.ui.theme.AccentColor
 import com.example.localliy.ui.theme.AppThemeMode
@@ -131,6 +134,8 @@ fun MainAppScreen(
 
     var isShuffleEnabled by remember { mutableStateOf(false) }
     var repeatMode by remember { mutableStateOf(RepeatMode.OFF) }
+    var libraryRefreshTrigger by remember { mutableIntStateOf(0) }
+    var isFullPlayerVisible by remember { mutableStateOf(false) }
 
     // Save last played song and exact queue state when changed
     LaunchedEffect(currentSong, activeQueueName, activeQueue) {
@@ -241,10 +246,10 @@ fun MainAppScreen(
     }
 
     // Audio Playback Controller
-    LaunchedEffect(currentSong) {
+    LaunchedEffect(currentSong?.id) {
         val song = currentSong
         if (song != null && song.contentUri != null && mediaPlayer != null) {
-            musicRepository.addToRecentlyPlayed(song, context)
+            musicRepository.addToRecentlyPlayed(song, context, activeQueueName)
             try {
                 mediaPlayer.reset()
                 mediaPlayer.setDataSource(context, Uri.parse(song.contentUri))
@@ -307,131 +312,203 @@ fun MainAppScreen(
         }
     }
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        containerColor = MaterialTheme.colorScheme.background,
-        bottomBar = {
-            if (isBottomBarVisible) {
-                Column {
-                    currentSong?.let { song ->
-                        MiniPlayer(
-                            currentSong = song,
-                            isPlaying = isPlaying,
-                            queueName = activeQueueName,
-                            progress = progress,
-                            onPlayPauseToggle = { isPlaying = !isPlaying },
-                            onSkipNext = { playNextTrack() },
-                            onSkipPrevious = { playPreviousTrack() }
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = MaterialTheme.colorScheme.background,
+            bottomBar = {
+                if (isBottomBarVisible && !isFullPlayerVisible) {
+                    Column {
+                        currentSong?.let { song ->
+                            MiniPlayer(
+                                currentSong = song,
+                                isPlaying = isPlaying,
+                                queueName = activeQueueName,
+                                progress = progress,
+                                onPlayPauseToggle = { isPlaying = !isPlaying },
+                                onSkipNext = { playNextTrack() },
+                                onSkipPrevious = { playPreviousTrack() },
+                                onClick = { isFullPlayerVisible = true }
+                            )
+                        }
+
+                        LocalliyBottomNavBar(
+                            selectedDestination = selectedDestination,
+                            onDestinationSelected = { destination ->
+                                selectedDestination = destination
+                            }
+                        )
+                    }
+                }
+            }
+        ) { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(if (isBottomBarVisible && !isFullPlayerVisible) innerPadding else PaddingValues(0.dp))
+            ) {
+                when (selectedDestination) {
+
+                    NavDestination.HOME -> {
+                        HomeScreen(
+                            repository = musicRepository,
+                            isShuffleEnabled = isShuffleEnabled,
+                            repeatMode = repeatMode,
+                            onToggleShuffle = { isShuffleEnabled = !isShuffleEnabled },
+                            onToggleRepeat = {
+                                repeatMode = when (repeatMode) {
+                                    RepeatMode.OFF -> RepeatMode.REPEAT_ALL
+                                    RepeatMode.REPEAT_ALL -> RepeatMode.REPEAT_ONE
+                                    RepeatMode.REPEAT_ONE -> RepeatMode.OFF
+                                }
+                            },
+                            onSongSelected = { song ->
+                                musicRepository.addToRecentlyPlayed(song, context, activeQueueName)
+                                currentSong = song
+                                isPlaying = true
+                            },
+                            onSongLikedToggle = { song ->
+                                musicRepository.toggleLike(song.id, context)
+                                songsList = musicRepository.getSongs()
+                                if (currentSong?.id == song.id) {
+                                    currentSong = currentSong?.copy(isLiked = !targetIsLiked(song))
+                                }
+                                libraryRefreshTrigger++
+                            },
+                            onPlayAllQueue = { queueSongs, queueTitle ->
+                                if (queueSongs.isNotEmpty()) {
+                                    activeQueue = queueSongs
+                                    activeQueueName = queueTitle
+                                    musicRepository.addToRecentlyPlayed(queueSongs.first(), context, queueTitle)
+                                    currentSong = if (isShuffleEnabled) queueSongs.random() else queueSongs.first()
+                                    isPlaying = true
+                                }
+                            }
                         )
                     }
 
-                    LocalliyBottomNavBar(
-                        selectedDestination = selectedDestination,
-                        onDestinationSelected = { destination ->
-                            selectedDestination = destination
-                        }
-                    )
+                    NavDestination.LIBRARY -> {
+                        LibraryScreen(
+                            repository = musicRepository,
+                            isShuffleEnabled = isShuffleEnabled,
+                            repeatMode = repeatMode,
+                            refreshTrigger = libraryRefreshTrigger,
+                            onToggleShuffle = { isShuffleEnabled = !isShuffleEnabled },
+                            onToggleRepeat = {
+                                repeatMode = when (repeatMode) {
+                                    RepeatMode.OFF -> RepeatMode.REPEAT_ALL
+                                    RepeatMode.REPEAT_ALL -> RepeatMode.REPEAT_ONE
+                                    RepeatMode.REPEAT_ONE -> RepeatMode.OFF
+                                }
+                            },
+                            onPlayAllQueue = { queueSongs, queueTitle ->
+                                if (queueSongs.isNotEmpty()) {
+                                    activeQueue = queueSongs
+                                    activeQueueName = queueTitle
+                                    musicRepository.addToRecentlyPlayed(queueSongs.first(), context, queueTitle)
+                                    currentSong = if (isShuffleEnabled) queueSongs.random() else queueSongs.first()
+                                    isPlaying = true
+                                }
+                            },
+                            onSongSelected = { song ->
+                                musicRepository.addToRecentlyPlayed(song, context, activeQueueName)
+                                currentSong = song
+                                isPlaying = true
+                            },
+                            onSongLikedToggle = { song ->
+                                musicRepository.toggleLike(song.id, context)
+                                songsList = musicRepository.getSongs()
+                                if (currentSong?.id == song.id) {
+                                    currentSong = currentSong?.copy(isLiked = !currentSong!!.isLiked)
+                                }
+                                libraryRefreshTrigger++
+                            },
+                            onBottomBarVisibilityChanged = { visible ->
+                                isBottomBarVisible = visible
+                            }
+                        )
+                    }
+
+                    NavDestination.SETTINGS -> {
+                        SettingsScreen(
+                            themeState = themeState,
+                            onThemeModeSelected = onThemeModeSelected,
+                            onAccentColorSelected = onAccentColorSelected,
+                            onCustomAccentColorSelected = onCustomAccentColorSelected,
+                            repository = musicRepository,
+                            onStorageCleared = {
+                                songsList = musicRepository.getSongs()
+                                currentSong = null
+                                isPlaying = false
+                                libraryRefreshTrigger++
+                                try {
+                                    mediaPlayer?.reset()
+                                } catch (_: Exception) {}
+                            }
+                        )
+                    }
                 }
             }
         }
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(if (isBottomBarVisible) innerPadding else PaddingValues(0.dp))
-        ) {
-            when (selectedDestination) {
 
-                NavDestination.HOME -> {
-                    HomeScreen(
-                        repository = musicRepository,
-                        isShuffleEnabled = isShuffleEnabled,
-                        repeatMode = repeatMode,
-                        onToggleShuffle = { isShuffleEnabled = !isShuffleEnabled },
-                        onToggleRepeat = {
-                            repeatMode = when (repeatMode) {
-                                RepeatMode.OFF -> RepeatMode.REPEAT_ALL
-                                RepeatMode.REPEAT_ALL -> RepeatMode.REPEAT_ONE
-                                RepeatMode.REPEAT_ONE -> RepeatMode.OFF
-                            }
-                        },
-                        onSongSelected = { song ->
-                            musicRepository.addToRecentlyPlayed(song, context)
-                            currentSong = song
-                            isPlaying = true
-                        },
-                        onSongLikedToggle = { song ->
-                            if (currentSong?.id == song.id) {
-                                currentSong = currentSong?.copy(isLiked = !song.isLiked)
-                            }
-                        },
-                        onPlayAllQueue = { queueSongs, queueTitle ->
-                            if (queueSongs.isNotEmpty()) {
-                                activeQueue = queueSongs
-                                activeQueueName = queueTitle
-                                currentSong = if (isShuffleEnabled) queueSongs.random() else queueSongs.first()
-                                isPlaying = true
-                            }
+        // --- Full Screen Music Player Overlay ---
+        if (isFullPlayerVisible && currentSong != null) {
+            MusicPlayerScreen(
+                currentSong = currentSong!!,
+                isPlaying = isPlaying,
+                queueName = activeQueueName,
+                isShuffleEnabled = isShuffleEnabled,
+                repeatMode = repeatMode,
+                progress = progress,
+                onPlayPauseToggle = { isPlaying = !isPlaying },
+                onSkipNext = { playNextTrack() },
+                onSkipPrevious = { playPreviousTrack() },
+                onToggleShuffle = { isShuffleEnabled = !isShuffleEnabled },
+                onToggleRepeat = {
+                    repeatMode = when (repeatMode) {
+                        RepeatMode.OFF -> RepeatMode.REPEAT_ALL
+                        RepeatMode.REPEAT_ALL -> RepeatMode.REPEAT_ONE
+                        RepeatMode.REPEAT_ONE -> RepeatMode.OFF
+                    }
+                },
+                onToggleLike = { target ->
+                    musicRepository.toggleLike(target.id, context)
+                    songsList = musicRepository.getSongs()
+                    if (currentSong?.id == target.id) {
+                        currentSong = currentSong?.copy(isLiked = !target.isLiked)
+                    }
+                    libraryRefreshTrigger++
+                },
+                onSeek = { fraction ->
+                    try {
+                        if (mediaPlayer != null && mediaPlayer.duration > 0) {
+                            val seekPos = (fraction * mediaPlayer.duration).toInt()
+                            mediaPlayer.seekTo(seekPos)
+                            progress = fraction
                         }
-                    )
-                }
-
-                NavDestination.LIBRARY -> {
-                    LibraryScreen(
-                        repository = musicRepository,
-                        isShuffleEnabled = isShuffleEnabled,
-                        repeatMode = repeatMode,
-                        onToggleShuffle = { isShuffleEnabled = !isShuffleEnabled },
-                        onToggleRepeat = {
-                            repeatMode = when (repeatMode) {
-                                RepeatMode.OFF -> RepeatMode.REPEAT_ALL
-                                RepeatMode.REPEAT_ALL -> RepeatMode.REPEAT_ONE
-                                RepeatMode.REPEAT_ONE -> RepeatMode.OFF
-                            }
-                        },
-                        onPlayAllQueue = { queueSongs, queueTitle ->
-                            if (queueSongs.isNotEmpty()) {
-                                activeQueue = queueSongs
-                                activeQueueName = queueTitle
-                                currentSong = if (isShuffleEnabled) queueSongs.random() else queueSongs.first()
-                                isPlaying = true
-                            }
-                        },
-                        onSongSelected = { song ->
-                            musicRepository.addToRecentlyPlayed(song, context)
-                            currentSong = song
-                            isPlaying = true
-                        },
-                        onSongLikedToggle = { song ->
-                            if (currentSong?.id == song.id) {
-                                currentSong = currentSong?.copy(isLiked = !song.isLiked)
-                            }
-                        },
-                        onBottomBarVisibilityChanged = { visible ->
-                            isBottomBarVisible = visible
-                        }
-                    )
-                }
-
-                NavDestination.SETTINGS -> {
-                    SettingsScreen(
-                        themeState = themeState,
-                        onThemeModeSelected = onThemeModeSelected,
-                        onAccentColorSelected = onAccentColorSelected,
-                        onCustomAccentColorSelected = onCustomAccentColorSelected,
-                        repository = musicRepository,
-                        onStorageCleared = {
-                            songsList = musicRepository.getSongs()
-                            currentSong = null
-                            isPlaying = false
-                            try {
-                                mediaPlayer?.reset()
-                            } catch (_: Exception) {}
-                        }
-                    )
-                }
-            }
+                    } catch (_: Exception) {}
+                },
+                onClose = { isFullPlayerVisible = false }
+            )
         }
+    }
+}
+
+private fun targetIsLiked(song: Song): Boolean = song.isLiked
+
+@Composable
+fun SimplePlaceholderScreen(title: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF0D1013)),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = title,
+            color = Color.White,
+            fontSize = 22.sp
+        )
     }
 }
 

@@ -48,8 +48,8 @@ fun MiniPlayer(
     onPlayPauseToggle: () -> Unit,
     onSkipNext: () -> Unit,
     onSkipPrevious: () -> Unit,
-    progress: Float = 0.0f,
     onClick: () -> Unit = {},
+    progress: Float = 0.0f,
     modifier: Modifier = Modifier
 ) {
     if (currentSong == null) return

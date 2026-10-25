@@ -5,7 +5,6 @@ import androidx.compose.ui.Modifier
 import com.example.localliy.data.model.RepeatMode
 import com.example.localliy.data.model.Song
 import com.example.localliy.data.repository.MusicRepository
-import com.example.localliy.ui.library.LibraryScreen
 
 @Composable
 fun LibraryScreen(
@@ -18,9 +17,10 @@ fun LibraryScreen(
     onToggleRepeat: () -> Unit = {},
     onSongLikedToggle: (Song) -> Unit = {},
     onBottomBarVisibilityChanged: (Boolean) -> Unit = {},
+    refreshTrigger: Int = 0,
     modifier: Modifier = Modifier
 ) {
-    LibraryScreen(
+    com.example.localliy.ui.library.LibraryScreen(
         repository = repository,
         onSongSelected = onSongSelected,
         onPlayAllQueue = onPlayAllQueue,
