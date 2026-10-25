@@ -257,20 +257,10 @@ fun MainAppScreen() {
                             currentSong = song,
                             isPlaying = isPlaying,
                             queueName = activeQueueName,
-                            isShuffleEnabled = isShuffleEnabled,
-                            repeatMode = repeatMode,
                             progress = progress,
                             onPlayPauseToggle = { isPlaying = !isPlaying },
                             onSkipNext = { playNextTrack() },
                             onSkipPrevious = { playPreviousTrack() },
-                            onToggleShuffle = { isShuffleEnabled = !isShuffleEnabled },
-                            onToggleRepeat = {
-                                repeatMode = when (repeatMode) {
-                                    RepeatMode.OFF -> RepeatMode.REPEAT_ALL
-                                    RepeatMode.REPEAT_ALL -> RepeatMode.REPEAT_ONE
-                                    RepeatMode.REPEAT_ONE -> RepeatMode.OFF
-                                }
-                            },
                             onToggleLike = { target ->
                                 musicRepository.toggleLike(target.id)
                                 songsList = musicRepository.getSongs()

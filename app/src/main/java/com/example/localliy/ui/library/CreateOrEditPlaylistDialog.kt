@@ -1,5 +1,6 @@
 package com.example.localliy.ui.library
 
+import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -52,6 +53,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -59,6 +61,23 @@ import coil.compose.AsyncImage
 import com.example.localliy.data.model.Playlist
 import com.example.localliy.data.model.PlaylistIconType
 import com.example.localliy.data.model.PlaylistThemes
+import java.io.File
+import java.io.FileOutputStream
+
+fun copyImageToInternalStorage(context: Context, sourceUri: Uri): String {
+    return try {
+        val inputStream = context.contentResolver.openInputStream(sourceUri) ?: return sourceUri.toString()
+        val coverDir = File(context.filesDir, "playlist_covers")
+        if (!coverDir.exists()) coverDir.mkdirs()
+        val destFile = File(coverDir, "cover_${System.currentTimeMillis()}.jpg")
+        FileOutputStream(destFile).use { outputStream ->
+            inputStream.copyTo(outputStream)
+        }
+        destFile.toURI().toString()
+    } catch (_: Exception) {
+        sourceUri.toString()
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,6 +92,8 @@ fun CreateOrEditPlaylistDialog(
     ) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
+
     var name by remember { mutableStateOf(existingPlaylist?.name ?: "") }
     var description by remember { mutableStateOf(existingPlaylist?.description ?: "") }
     var selectedIcon by remember { mutableStateOf(existingPlaylist?.iconType ?: PlaylistIconType.MUSIC) }
@@ -88,7 +109,8 @@ fun CreateOrEditPlaylistDialog(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            customImageUri = it.toString()
+            val permanentUri = copyImageToInternalStorage(context, it)
+            customImageUri = permanentUri
         }
     }
 
