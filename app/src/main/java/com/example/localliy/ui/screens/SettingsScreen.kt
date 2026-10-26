@@ -138,7 +138,7 @@ fun SettingsScreen(
     ) { isGranted ->
         if (isGranted && repository != null) {
             repository.isPermissionGranted = true
-            val count = repository.scanLocalAudio(context)
+            val count = repository.rescanLocalAudio(context)
             Toast.makeText(context, "Scanned $count songs from device storage", Toast.LENGTH_SHORT).show()
             onStorageCleared()
         } else {

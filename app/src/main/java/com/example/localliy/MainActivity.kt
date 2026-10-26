@@ -472,6 +472,7 @@ fun MainAppScreen(
                 isShuffleEnabled = isShuffleEnabled,
                 repeatMode = repeatMode,
                 progress = progress,
+                playlists = musicRepository.getPlaylists(),
                 onPlayPauseToggle = { isPlaying = !isPlaying },
                 onSkipNext = { playNextTrack() },
                 onSkipPrevious = { playPreviousTrack() },
@@ -482,6 +483,14 @@ fun MainAppScreen(
                         RepeatMode.REPEAT_ALL -> RepeatMode.REPEAT_ONE
                         RepeatMode.REPEAT_ONE -> RepeatMode.OFF
                     }
+                },
+                onSelectPlaylist = { selectedPl ->
+                    musicRepository.addSongsToPlaylist(context, selectedPl.id, listOf(currentSong!!))
+                    libraryRefreshTrigger++
+                },
+                onCreateNewPlaylist = {
+                    isFullPlayerVisible = false
+                    selectedDestination = NavDestination.LIBRARY
                 },
                 onSeek = { fraction ->
                     try {

@@ -123,7 +123,7 @@ fun LibraryScreen(
     ) { isGranted ->
         if (isGranted) {
             repository.isPermissionGranted = true
-            repository.scanLocalAudio(context)
+            repository.rescanLocalAudio(context)
             refreshState++
         }
     }
@@ -283,7 +283,7 @@ fun LibraryScreen(
                                 targetSongForPlaylist = song
                             },
                             onDeleteSong = { song ->
-                                repository.deleteSong(song.id)
+                                repository.deleteSong(song.id, context)
                                 refreshState++
                             }
                         )

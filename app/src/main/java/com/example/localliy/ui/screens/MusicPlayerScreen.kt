@@ -3,6 +3,7 @@ package com.example.localliy.ui.screens
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +31,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
@@ -41,8 +43,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -52,8 +52,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.localliy.R
+import com.example.localliy.data.model.Playlist
 import com.example.localliy.data.model.RepeatMode
 import com.example.localliy.data.model.Song
+import com.example.localliy.ui.library.SelectPlaylistForSongDialog
 import com.example.localliy.ui.theme.LocalliyTheme
 import java.util.Locale
 
@@ -65,12 +67,14 @@ fun MusicPlayerScreen(
     isShuffleEnabled: Boolean,
     repeatMode: RepeatMode,
     progress: Float,
+    playlists: List<Playlist> = emptyList(),
     onPlayPauseToggle: () -> Unit,
     onSkipNext: () -> Unit,
     onSkipPrevious: () -> Unit,
     onToggleShuffle: () -> Unit,
     onToggleRepeat: () -> Unit,
-    onAddToPlaylist: () -> Unit = {},
+    onSelectPlaylist: (Playlist) -> Unit = {},
+    onCreateNewPlaylist: () -> Unit = {},
     onSeek: (Float) -> Unit = {},
     onClose: () -> Unit,
     modifier: Modifier = Modifier
@@ -79,17 +83,38 @@ fun MusicPlayerScreen(
         onClose()
     }
 
-    val activeGreen = Color(0xFF22C55E)
+    val accentColor = MaterialTheme.colorScheme.primary
+    val playButtonBg = MaterialTheme.colorScheme.primary
+    val playButtonIconTint = MaterialTheme.colorScheme.onPrimary
+    val mainTextColor = MaterialTheme.colorScheme.onBackground
+    val subtitleTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val inactiveControlTint = MaterialTheme.colorScheme.onSurfaceVariant
+
     var isMenuExpanded by remember { mutableStateOf(false) }
+    var showSelectPlaylistDialog by remember { mutableStateOf(false) }
 
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF0A0D10))
-            .padding(24.dp)
+            .background(MaterialTheme.colorScheme.background)
     ) {
+        // --- Full Screen Click Interceptor Backdrop Button ---
+        // Consumes all touch events below inputs to prevent click-throughs to screens behind
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {} // Intentionally empty to block click-throughs
+                )
+        )
+
+        // --- Main Player Layout ---
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             // --- Top Bar with 3 Dots Menu ---
@@ -102,7 +127,7 @@ fun MusicPlayerScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = Color.White
+                        tint = mainTextColor
                     )
                 }
 
@@ -111,14 +136,14 @@ fun MusicPlayerScreen(
                 ) {
                     Text(
                         text = "PLAYING FROM",
-                        color = Color(0xFF8E95A2),
+                        color = subtitleTextColor,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.2.sp
                     )
                     Text(
                         text = queueName.ifBlank { "Library" },
-                        color = Color.White,
+                        color = mainTextColor,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
@@ -131,7 +156,7 @@ fun MusicPlayerScreen(
                         Icon(
                             imageVector = Icons.Default.MoreVert,
                             contentDescription = "Options",
-                            tint = Color.White
+                            tint = mainTextColor
                         )
                     }
 
@@ -140,20 +165,20 @@ fun MusicPlayerScreen(
                         onDismissRequest = { isMenuExpanded = false },
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFF1E242C))
+                            .background(MaterialTheme.colorScheme.surface)
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Add to Playlist", color = Color.White) },
+                            text = { Text("Add to Playlist", color = MaterialTheme.colorScheme.onSurface) },
                             leadingIcon = {
                                 Icon(
                                     Icons.AutoMirrored.Filled.PlaylistAdd,
                                     contentDescription = null,
-                                    tint = activeGreen
+                                    tint = accentColor
                                 )
                             },
                             onClick = {
                                 isMenuExpanded = false
-                                onAddToPlaylist()
+                                showSelectPlaylistDialog = true
                             }
                         )
                     }
@@ -168,11 +193,7 @@ fun MusicPlayerScreen(
                     .fillMaxWidth()
                     .height(320.dp)
                     .clip(RoundedCornerShape(24.dp))
-                    .background(
-                        Brush.linearGradient(
-                            colors = listOf(Color(0xFF1E293B), Color(0xFF0F172A))
-                        )
-                    ),
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
                 val hasArt = !currentSong.albumArtUri.isNullOrBlank() && !currentSong.albumArtUri.endsWith("/0")
@@ -189,7 +210,7 @@ fun MusicPlayerScreen(
                     Icon(
                         painter = painterResource(id = R.drawable.ic_music_note),
                         contentDescription = null,
-                        tint = activeGreen,
+                        tint = accentColor,
                         modifier = Modifier.size(64.dp)
                     )
                 }
@@ -197,13 +218,13 @@ fun MusicPlayerScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // --- Song Title & Artist (Like Button Removed) ---
+            // --- Song Title & Artist ---
             Column(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
                     text = currentSong.title,
-                    color = Color.White,
+                    color = mainTextColor,
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
@@ -212,7 +233,7 @@ fun MusicPlayerScreen(
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = currentSong.artist,
-                    color = Color(0xFF9CA3AF),
+                    color = subtitleTextColor,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Normal,
                     maxLines = 1,
@@ -230,9 +251,9 @@ fun MusicPlayerScreen(
                     value = progress.coerceIn(0f, 1f),
                     onValueChange = { onSeek(it) },
                     colors = SliderDefaults.colors(
-                        thumbColor = Color.White,
-                        activeTrackColor = Color.White,
-                        inactiveTrackColor = Color(0xFF2B333E)
+                        thumbColor = accentColor,
+                        activeTrackColor = accentColor,
+                        inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -246,12 +267,12 @@ fun MusicPlayerScreen(
                     val currentSecs = ((currentSong.durationMs * progress.coerceIn(0f, 1f)) / 1000).toLong()
                     Text(
                         text = formatDuration(currentSecs * 1000),
-                        color = Color(0xFF8E95A2),
+                        color = subtitleTextColor,
                         fontSize = 12.sp
                     )
                     Text(
                         text = currentSong.formattedDuration,
-                        color = Color(0xFF8E95A2),
+                        color = subtitleTextColor,
                         fontSize = 12.sp
                     )
                 }
@@ -270,7 +291,7 @@ fun MusicPlayerScreen(
                     Icon(
                         imageVector = Icons.Default.Shuffle,
                         contentDescription = "Shuffle",
-                        tint = if (isShuffleEnabled) activeGreen else Color(0xFF6B7280),
+                        tint = if (isShuffleEnabled) accentColor else inactiveControlTint,
                         modifier = Modifier.size(26.dp)
                     )
                 }
@@ -280,7 +301,7 @@ fun MusicPlayerScreen(
                     Icon(
                         imageVector = Icons.Default.SkipPrevious,
                         contentDescription = "Previous",
-                        tint = Color.White,
+                        tint = mainTextColor,
                         modifier = Modifier.size(36.dp)
                     )
                 }
@@ -290,14 +311,14 @@ fun MusicPlayerScreen(
                     modifier = Modifier
                         .size(68.dp)
                         .clip(CircleShape)
-                        .background(Color.White)
+                        .background(playButtonBg)
                         .clickable { onPlayPauseToggle() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                         contentDescription = if (isPlaying) "Pause" else "Play",
-                        tint = Color.Black,
+                        tint = playButtonIconTint,
                         modifier = Modifier.size(36.dp)
                     )
                 }
@@ -307,7 +328,7 @@ fun MusicPlayerScreen(
                     Icon(
                         imageVector = Icons.Default.SkipNext,
                         contentDescription = "Next",
-                        tint = Color.White,
+                        tint = mainTextColor,
                         modifier = Modifier.size(36.dp)
                     )
                 }
@@ -315,7 +336,7 @@ fun MusicPlayerScreen(
                 // Repeat Button
                 IconButton(onClick = onToggleRepeat) {
                     val icon = if (repeatMode == RepeatMode.REPEAT_ONE) Icons.Default.RepeatOne else Icons.Default.Repeat
-                    val tint = if (repeatMode != RepeatMode.OFF) activeGreen else Color(0xFF6B7280)
+                    val tint = if (repeatMode != RepeatMode.OFF) accentColor else inactiveControlTint
                     Icon(
                         imageVector = icon,
                         contentDescription = "Repeat",
@@ -326,6 +347,23 @@ fun MusicPlayerScreen(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        // --- Add to Playlist Dialog ---
+        if (showSelectPlaylistDialog) {
+            SelectPlaylistForSongDialog(
+                song = currentSong,
+                playlists = playlists,
+                onSelectPlaylist = { selectedPlaylist ->
+                    onSelectPlaylist(selectedPlaylist)
+                    showSelectPlaylistDialog = false
+                },
+                onCreateNewPlaylist = {
+                    showSelectPlaylistDialog = false
+                    onCreateNewPlaylist()
+                },
+                onDismiss = { showSelectPlaylistDialog = false }
+            )
         }
     }
 }

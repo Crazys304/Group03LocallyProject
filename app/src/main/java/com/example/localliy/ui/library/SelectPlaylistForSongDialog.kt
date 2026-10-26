@@ -24,6 +24,7 @@ import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -54,7 +55,7 @@ fun SelectPlaylistForSongDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(20.dp))
-                .background(Color(0xFF161B22))
+                .background(MaterialTheme.colorScheme.surface)
                 .padding(20.dp)
         ) {
             Column {
@@ -65,13 +66,13 @@ fun SelectPlaylistForSongDialog(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Add to Playlist",
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = song.title,
-                            color = ActiveGreen,
+                            color = MaterialTheme.colorScheme.primary,
                             fontSize = 13.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -79,7 +80,11 @@ fun SelectPlaylistForSongDialog(
                     }
 
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
                     }
                 }
 
@@ -90,7 +95,7 @@ fun SelectPlaylistForSongDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFF222B36))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
                         .clickable {
                             onDismiss()
                             onCreateNewPlaylist()
@@ -102,15 +107,19 @@ fun SelectPlaylistForSongDialog(
                         modifier = Modifier
                             .size(40.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(ActiveGreen),
+                            .background(MaterialTheme.colorScheme.primary),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = null, tint = Color.Black)
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         text = "New Playlist...",
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -121,7 +130,7 @@ fun SelectPlaylistForSongDialog(
                 if (customPlaylists.isEmpty()) {
                     Text(
                         text = "No custom playlists created yet.",
-                        color = Color(0xFF9CA3AF),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 13.sp,
                         modifier = Modifier.padding(vertical = 12.dp)
                     )
@@ -135,7 +144,7 @@ fun SelectPlaylistForSongDialog(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(Color(0xFF1D242E))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
                                     .clickable {
                                         onSelectPlaylist(playlist)
                                         onDismiss()
@@ -163,13 +172,13 @@ fun SelectPlaylistForSongDialog(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = playlist.name,
-                                        color = Color.White,
+                                        color = MaterialTheme.colorScheme.onSurface,
                                         fontSize = 15.sp,
                                         fontWeight = FontWeight.Bold
                                     )
                                     Text(
                                         text = "${playlist.songCount} songs",
-                                        color = Color(0xFF9CA3AF),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         fontSize = 12.sp
                                     )
                                 }

@@ -98,6 +98,39 @@ class MusicRepository {
         }
     }
 
+    fun saveDeletedSongToPrefs(context: Context, songId: String) {
+        appContext = context.applicationContext
+        try {
+            val prefs = context.getSharedPreferences("localliy_playlists", Context.MODE_PRIVATE)
+            val existing = prefs.getStringSet("deleted_song_ids", emptySet())?.toMutableSet() ?: mutableSetOf()
+            existing.add(songId)
+            prefs.edit().putStringSet("deleted_song_ids", existing).apply()
+        } catch (_: Exception) {}
+    }
+
+    fun getDeletedSongIdsFromPrefs(context: Context): Set<String> {
+        appContext = context.applicationContext
+        return try {
+            val prefs = context.getSharedPreferences("localliy_playlists", Context.MODE_PRIVATE)
+            prefs.getStringSet("deleted_song_ids", emptySet()) ?: emptySet()
+        } catch (_: Exception) {
+            emptySet()
+        }
+    }
+
+    fun clearDeletedSongsBlacklist(context: Context) {
+        appContext = context.applicationContext
+        try {
+            val prefs = context.getSharedPreferences("localliy_playlists", Context.MODE_PRIVATE)
+            prefs.edit().remove("deleted_song_ids").apply()
+        } catch (_: Exception) {}
+    }
+
+    fun rescanLocalAudio(context: Context): Int {
+        clearDeletedSongsBlacklist(context)
+        return scanLocalAudio(context)
+    }
+
     fun loadRecentlyPlayedFromPrefs(context: Context) {
         appContext = context.applicationContext
         try {
@@ -150,9 +183,16 @@ class MusicRepository {
                 val albumIdColumn = c.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
                 val dataColumn = c.getColumnIndex(MediaStore.Audio.Media.DATA)
 
+                val deletedIds = getDeletedSongIdsFromPrefs(context)
                 val scanned = mutableListOf<Song>()
                 while (c.moveToNext()) {
                     val id = c.getLong(idColumn)
+                    val songId = "local_$id"
+
+                    if (deletedIds.contains(songId)) {
+                        continue // Skip deleted songs permanently
+                    }
+
                     val rawTitle = c.getString(titleColumn) ?: "Unknown Track"
                     val rawArtist = c.getString(artistColumn) ?: "Unknown Artist"
                     val rawAlbum = c.getString(albumColumn) ?: "Unknown Album"
@@ -213,14 +253,23 @@ class MusicRepository {
 
     fun clearStorageAndReset(context: Context) {
         appContext = context.applicationContext
+
+        try {
+            val prefs = context.getSharedPreferences("localliy_playlists", Context.MODE_PRIVATE)
+            val currentDeletedIds = prefs.getStringSet("deleted_song_ids", emptySet())?.toMutableSet() ?: mutableSetOf()
+            val allCurrentSongIds = localSongs.map { it.id }.toSet()
+            currentDeletedIds.addAll(allCurrentSongIds)
+
+            prefs.edit()
+                .clear()
+                .putStringSet("deleted_song_ids", currentDeletedIds)
+                .apply()
+        } catch (_: Exception) {}
+
         localSongs.clear()
         customPlaylists.clear()
         recentlyPlayedSongs.clear()
         recentlyPlayedPlaylists.clear()
-        try {
-            val prefs = context.getSharedPreferences("localliy_playlists", Context.MODE_PRIVATE)
-            prefs.edit().clear().apply()
-        } catch (_: Exception) {}
     }
 
     fun getSongs(
@@ -362,7 +411,17 @@ class MusicRepository {
         }
     }
 
-    fun deleteSong(songId: String) {
+    fun deleteSong(songId: String, context: Context? = null) {
+        context?.let { appContext = it.applicationContext }
+
+        // Attempt media store deletion if contentUri exists
+        val targetSong = localSongs.firstOrNull { it.id == songId }
+        if (targetSong?.contentUri != null && appContext != null) {
+            try {
+                appContext!!.contentResolver.delete(Uri.parse(targetSong.contentUri), null, null)
+            } catch (_: Exception) {}
+        }
+
         localSongs.removeIf { it.id == songId }
         customPlaylists.forEach { pl ->
             val updatedSongs = pl.songs.filterNot { it.id == songId }
@@ -372,9 +431,12 @@ class MusicRepository {
             }
         }
         recentlyPlayedSongs.removeIf { it.id == songId }
-        appContext?.let {
-            saveLikedSongsToPrefs(it)
-            saveRecentlyPlayedToPrefs(it)
+
+        appContext?.let { ctx ->
+            saveDeletedSongToPrefs(ctx, songId)
+            saveLikedSongsToPrefs(ctx)
+            saveRecentlyPlayedToPrefs(ctx)
+            savePlaylistsToPrefs(ctx)
         }
     }
 
