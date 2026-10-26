@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
@@ -22,6 +21,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -33,7 +33,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -50,6 +49,9 @@ fun LibraryHeader(
     modifier: Modifier = Modifier
 ) {
     var isMenuExpanded by remember { mutableStateOf(false) }
+    val accentColor = MaterialTheme.colorScheme.primary
+    val titleTextColor = MaterialTheme.colorScheme.onBackground
+    val iconTextColor = MaterialTheme.colorScheme.onBackground
 
     Column(
         modifier = modifier
@@ -62,7 +64,7 @@ fun LibraryHeader(
         ) {
             Text(
                 text = "Library",
-                color = Color.White,
+                color = titleTextColor,
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f)
@@ -73,7 +75,7 @@ fun LibraryHeader(
                 Icon(
                     imageVector = if (isSearchActive) Icons.Default.Close else Icons.Default.Search,
                     contentDescription = "Search",
-                    tint = if (isSearchActive) ActiveGreen else Color.White,
+                    tint = if (isSearchActive) accentColor else iconTextColor,
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -84,7 +86,7 @@ fun LibraryHeader(
                     Icon(
                         imageVector = Icons.Default.MoreVert,
                         contentDescription = "Options",
-                        tint = Color.White,
+                        tint = iconTextColor,
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -94,15 +96,15 @@ fun LibraryHeader(
                     onDismissRequest = { isMenuExpanded = false },
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFF1E242C))
+                        .background(MaterialTheme.colorScheme.surface)
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Sort Library", color = Color.White) },
+                        text = { Text("Sort Library", color = MaterialTheme.colorScheme.onSurface) },
                         leadingIcon = {
                             Icon(
                                 Icons.Default.Sort,
                                 contentDescription = null,
-                                tint = ActiveGreen
+                                tint = accentColor
                             )
                         },
                         onClick = {
@@ -111,12 +113,12 @@ fun LibraryHeader(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Scan Local Music", color = Color.White) },
+                        text = { Text("Scan Local Music", color = MaterialTheme.colorScheme.onSurface) },
                         leadingIcon = {
                             Icon(
                                 Icons.Default.Refresh,
                                 contentDescription = null,
-                                tint = ActiveGreen
+                                tint = accentColor
                             )
                         },
                         onClick = {
@@ -135,13 +137,13 @@ fun LibraryHeader(
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = onSearchQueryChange,
-                    placeholder = { Text("Search songs, playlists, artists...", color = Color(0xFF9CA3AF)) },
+                    placeholder = { Text("Search songs, playlists, artists...", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                     singleLine = true,
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.Search,
                             contentDescription = null,
-                            tint = ActiveGreen
+                            tint = accentColor
                         )
                     },
                     trailingIcon = {
@@ -150,18 +152,18 @@ fun LibraryHeader(
                                 Icon(
                                     imageVector = Icons.Default.Close,
                                     contentDescription = "Clear search",
-                                    tint = Color(0xFF9CA3AF)
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
                     },
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFF181D23),
-                        unfocusedContainerColor = Color(0xFF181D23),
-                        focusedBorderColor = ActiveGreen,
-                        unfocusedBorderColor = Color(0xFF2E3642),
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        focusedBorderColor = accentColor,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                     ),
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.fillMaxWidth()

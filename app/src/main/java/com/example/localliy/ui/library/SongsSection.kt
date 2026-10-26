@@ -29,6 +29,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -68,7 +69,7 @@ fun SongsSection(
         ) {
             Text(
                 text = "${songs.size} songs • Sorted by ${currentSortOption.label}",
-                color = Color(0xFF9CA3AF),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium
             )
@@ -107,7 +108,7 @@ fun SongsSection(
             ) {
                 Text(
                     text = "No songs scanned from device storage yet.",
-                    color = Color(0xFF9CA3AF),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 15.sp
                 )
             }
@@ -146,7 +147,7 @@ fun SongItemCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(cardShape)
-            .background(Color(0xFF14191F))
+            .background(MaterialTheme.colorScheme.surface)
             .clickable { onClick() }
             .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -156,7 +157,7 @@ fun SongItemCard(
             modifier = Modifier
                 .size(48.dp)
                 .clip(RoundedCornerShape(10.dp))
-                .background(Color(0xFF1E2630)),
+                .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -175,7 +176,7 @@ fun SongItemCard(
         ) {
             Text(
                 text = song.title,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
@@ -184,7 +185,7 @@ fun SongItemCard(
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = "${song.artist} • ${song.album}",
-                color = Color(0xFF9CA3AF),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 13.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -194,7 +195,7 @@ fun SongItemCard(
         // Duration text
         Text(
             text = song.formattedDuration,
-            color = Color(0xFF6B7280),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 12.sp,
             modifier = Modifier.padding(horizontal = 4.dp)
         )
@@ -207,7 +208,7 @@ fun SongItemCard(
             Icon(
                 imageVector = if (song.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                 contentDescription = "Like",
-                tint = if (song.isLiked) Color(0xFFEF4444) else Color(0xFF9CA3AF),
+                tint = if (song.isLiked) Color(0xFFEF4444) else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -221,7 +222,7 @@ fun SongItemCard(
                 Icon(
                     imageVector = Icons.Default.MoreVert,
                     contentDescription = "More",
-                    tint = Color(0xFF9CA3AF),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -231,10 +232,10 @@ fun SongItemCard(
                 onDismissRequest = { isMenuExpanded = false },
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFF1E242C))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 DropdownMenuItem(
-                    text = { Text("Play Song", color = Color.White) },
+                    text = { Text("Play Song", color = MaterialTheme.colorScheme.onSurface) },
                     leadingIcon = { Icon(Icons.Default.PlayArrow, contentDescription = null, tint = ActiveGreen) },
                     onClick = {
                         isMenuExpanded = false
@@ -242,7 +243,7 @@ fun SongItemCard(
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text("Add to Playlist", color = Color.White) },
+                    text = { Text("Add to Playlist", color = MaterialTheme.colorScheme.onSurface) },
                     leadingIcon = { Icon(Icons.Default.PlaylistAdd, contentDescription = null, tint = ActiveGreen) },
                     onClick = {
                         isMenuExpanded = false
@@ -250,7 +251,7 @@ fun SongItemCard(
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text(if (song.isLiked) "Unlike" else "Favorite", color = Color.White) },
+                    text = { Text(if (song.isLiked) "Unlike" else "Favorite", color = MaterialTheme.colorScheme.onSurface) },
                     leadingIcon = {
                         Icon(
                             if (song.isLiked) Icons.Default.FavoriteBorder else Icons.Default.Favorite,

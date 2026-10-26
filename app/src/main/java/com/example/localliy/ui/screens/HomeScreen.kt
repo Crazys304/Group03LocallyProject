@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -116,20 +117,20 @@ fun HomeScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFF0D1013))
+                .background(MaterialTheme.colorScheme.background)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 18.dp, vertical = 16.dp)
         ) {
             // --- Header ---
             Text(
                 text = "Good evening",
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold
             )
             Text(
                 text = "Ready for some music?",
-                color = Color(0xFF9E9E9E),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 15.sp,
                 modifier = Modifier.padding(top = 4.dp)
             )
@@ -147,7 +148,7 @@ fun HomeScreen(
             // --- Recently Played Section ---
             Text(
                 text = "Recently played",
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -175,7 +176,7 @@ fun HomeScreen(
             } else {
                 Text(
                     text = if (searchQuery.isNotBlank()) "No songs match your search" else "No songs found on device yet",
-                    color = Color(0xFF8E95A2),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 14.sp,
                     modifier = Modifier.padding(vertical = 12.dp)
                 )
@@ -183,7 +184,7 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(22.dp))
 
-            // --- Smart Shuffle Banner (Hardcoded UI style as requested) ---
+            // --- Smart Shuffle Banner ---
             SmartShuffleCard(
                 onClick = {
                     val allSongs = repository.allSongs
@@ -198,7 +199,7 @@ fun HomeScreen(
             // --- Your Playlists Section ---
             Text(
                 text = "Your playlists",
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -209,14 +210,13 @@ fun HomeScreen(
                 PlaylistsContainer(
                     playlists = playlists,
                     onPlaylistClick = { playlist ->
-                        // Opens Playlist Detail directly on Home Screen
                         selectedPlaylist = playlist
                     }
                 )
             } else {
                 Text(
                     text = if (searchQuery.isNotBlank()) "No playlists match your search" else "No playlists created yet",
-                    color = Color(0xFF8E95A2),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 14.sp,
                     modifier = Modifier.padding(vertical = 12.dp)
                 )
@@ -282,15 +282,15 @@ private fun SearchBarUI(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFF161A1E))
-            .border(1.dp, Color(0xFF252C33), RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp))
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             painter = painterResource(id = R.drawable.ic_search),
             contentDescription = "Search",
-            tint = Color(0xFF8E95A2),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(20.dp)
         )
 
@@ -300,7 +300,7 @@ private fun SearchBarUI(
             if (searchQuery.isEmpty()) {
                 Text(
                     text = "Search your music, playlists...",
-                    color = Color(0xFF8E95A2),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 15.sp
                 )
             }
@@ -308,9 +308,9 @@ private fun SearchBarUI(
                 value = searchQuery,
                 onValueChange = onSearchQueryChange,
                 singleLine = true,
-                cursorBrush = SolidColor(Color.White),
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                 textStyle = TextStyle(
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 15.sp
                 ),
                 modifier = Modifier.fillMaxWidth()
@@ -325,7 +325,7 @@ private fun SearchBarUI(
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = "Clear search",
-                    tint = Color(0xFF8E95A2)
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -370,7 +370,7 @@ private fun RecentlyPlayedSongCard(
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = song.title,
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onSurface,
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
@@ -378,7 +378,7 @@ private fun RecentlyPlayedSongCard(
         )
         Text(
             text = song.artist,
-            color = Color(0xFF8E95A2),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 12.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -397,10 +397,13 @@ private fun SmartShuffleCard(onClick: () -> Unit) {
             .clip(cardShape)
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(Color(0xFF102D1B), Color(0xFF091A10))
+                    colors = listOf(
+                        MaterialTheme.colorScheme.primaryContainer,
+                        MaterialTheme.colorScheme.surface
+                    )
                 )
             )
-            .border(1.dp, Color(0xFF1F5231), cardShape)
+            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), cardShape)
             .clickable { onClick() }
             .padding(16.dp)
     ) {
@@ -408,13 +411,13 @@ private fun SmartShuffleCard(onClick: () -> Unit) {
             Icon(
                 painter = painterResource(id = R.drawable.ic_sparkle),
                 contentDescription = "Smart Shuffle",
-                tint = Color.White,
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(18.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "Smart Shuffle",
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 17.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -424,7 +427,7 @@ private fun SmartShuffleCard(onClick: () -> Unit) {
 
         Text(
             text = "Mix your library based on your listening habits.",
-            color = Color(0xFFA3B8AB),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 13.sp
         )
 
@@ -433,12 +436,12 @@ private fun SmartShuffleCard(onClick: () -> Unit) {
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(20.dp))
-                .background(Color(0xFF163B23))
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
                 .padding(horizontal = 12.dp, vertical = 6.dp)
         ) {
             Text(
                 text = "Balanced · 40% randomness",
-                color = Color(0xFF82E29F),
+                color = MaterialTheme.colorScheme.primary,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium
             )
@@ -458,8 +461,8 @@ private fun PlaylistsContainer(
         modifier = Modifier
             .fillMaxWidth()
             .clip(containerShape)
-            .background(Color(0xFF13171A))
-            .border(1.dp, Color(0xFF22282F), containerShape)
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, containerShape)
     ) {
         playlists.forEachIndexed { index, playlist ->
             val iconRes = when (playlist.iconType) {
@@ -505,13 +508,13 @@ private fun PlaylistsContainer(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = playlist.name,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
                         text = "${playlist.songs.size} songs",
-                        color = Color(0xFF8E95A2),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 13.sp
                     )
                 }
@@ -519,14 +522,14 @@ private fun PlaylistsContainer(
                 Icon(
                     painter = painterResource(id = R.drawable.ic_chevron_right),
                     contentDescription = "Open",
-                    tint = Color(0xFF8E95A2),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(18.dp)
                 )
             }
 
             if (index < playlists.lastIndex) {
                 HorizontalDivider(
-                    color = Color(0xFF22282F),
+                    color = MaterialTheme.colorScheme.outlineVariant,
                     thickness = 0.8.dp,
                     modifier = Modifier.padding(start = 76.dp, end = 14.dp)
                 )

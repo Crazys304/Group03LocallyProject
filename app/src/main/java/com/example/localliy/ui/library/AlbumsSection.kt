@@ -25,6 +25,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -34,8 +35,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -59,7 +58,7 @@ fun AlbumsSection(
         ) {
             Text(
                 text = "No albums found",
-                color = Color(0xFF9CA3AF),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 16.sp
             )
         }
@@ -96,7 +95,7 @@ fun AlbumItemCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(cardShape)
-            .background(Color(0xFF14191F))
+            .background(MaterialTheme.colorScheme.surface)
             .clickable { onClick() }
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -106,11 +105,7 @@ fun AlbumItemCard(
             modifier = Modifier
                 .size(56.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(Color(0xFF1E293B), Color(0xFF0F172A))
-                    )
-                ),
+                .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -129,7 +124,7 @@ fun AlbumItemCard(
         ) {
             Text(
                 text = album.name,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 17.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
@@ -138,7 +133,7 @@ fun AlbumItemCard(
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = "${album.artist} • ${album.songCount} songs",
-                color = Color(0xFF9CA3AF),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
@@ -151,7 +146,7 @@ fun AlbumItemCard(
                 Icon(
                     imageVector = Icons.Default.MoreVert,
                     contentDescription = "Options",
-                    tint = Color(0xFF9CA3AF),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -161,10 +156,10 @@ fun AlbumItemCard(
                 onDismissRequest = { isMenuExpanded = false },
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFF1E242C))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 DropdownMenuItem(
-                    text = { Text("Play Album", color = Color.White) },
+                    text = { Text("Play Album", color = MaterialTheme.colorScheme.onSurface) },
                     leadingIcon = { Icon(Icons.Default.PlayArrow, contentDescription = null, tint = ActiveGreen) },
                     onClick = {
                         isMenuExpanded = false
@@ -172,7 +167,7 @@ fun AlbumItemCard(
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text("Add Album to Playlist", color = Color.White) },
+                    text = { Text("Add Album to Playlist", color = MaterialTheme.colorScheme.onSurface) },
                     leadingIcon = { Icon(Icons.Default.PlaylistAdd, contentDescription = null, tint = ActiveGreen) },
                     onClick = {
                         isMenuExpanded = false

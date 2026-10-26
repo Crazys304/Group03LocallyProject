@@ -36,6 +36,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -74,7 +75,7 @@ fun PlaylistsSection(
         ) {
             Text(
                 text = "No playlists found",
-                color = Color(0xFF9CA3AF),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 16.sp
             )
         }
@@ -113,7 +114,7 @@ fun PlaylistItemCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(cardShape)
-            .background(Color(0xFF14191F))
+            .background(MaterialTheme.colorScheme.surface)
             .clickable { onClick() }
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -167,7 +168,7 @@ fun PlaylistItemCard(
         ) {
             Text(
                 text = playlist.name,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 17.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
@@ -176,7 +177,7 @@ fun PlaylistItemCard(
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = "${playlist.songCount} songs" + if (playlist.description.isNotBlank()) " • ${playlist.description}" else "",
-                color = Color(0xFF9CA3AF),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
@@ -190,7 +191,7 @@ fun PlaylistItemCard(
                 Icon(
                     imageVector = Icons.Default.MoreVert,
                     contentDescription = "Options",
-                    tint = Color(0xFF9CA3AF),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -200,11 +201,11 @@ fun PlaylistItemCard(
                 onDismissRequest = { isMenuExpanded = false },
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFF1E242C))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 if (playlist.id != "liked_songs") {
                     DropdownMenuItem(
-                        text = { Text("Add Songs", color = Color.White) },
+                        text = { Text("Add Songs", color = MaterialTheme.colorScheme.onSurface) },
                         leadingIcon = { Icon(Icons.Default.Add, contentDescription = null, tint = ActiveGreen) },
                         onClick = {
                             isMenuExpanded = false
@@ -212,7 +213,7 @@ fun PlaylistItemCard(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Edit Playlist Look", color = Color.White) },
+                        text = { Text("Edit Playlist Look", color = MaterialTheme.colorScheme.onSurface) },
                         leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, tint = ActiveGreen) },
                         onClick = {
                             isMenuExpanded = false
@@ -229,7 +230,7 @@ fun PlaylistItemCard(
                     )
                 } else {
                     DropdownMenuItem(
-                        text = { Text("View Liked Songs", color = Color.White) },
+                        text = { Text("View Liked Songs", color = MaterialTheme.colorScheme.onSurface) },
                         leadingIcon = { Icon(Icons.Default.Favorite, contentDescription = null, tint = ActiveGreen) },
                         onClick = {
                             isMenuExpanded = false

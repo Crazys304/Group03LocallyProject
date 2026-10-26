@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -28,10 +29,21 @@ enum class LibraryCategory(val displayName: String) {
     SONGS("Songs")
 }
 
-val ActiveGreen = Color(0xFF22C55E)
-val ActiveGreenBg = Color(0xFF143822)
-val InactiveChipBg = Color(0xFF1E242C)
-val InactiveText = Color(0xFF9CA3AF)
+val ActiveGreen: Color
+    @Composable
+    get() = MaterialTheme.colorScheme.primary
+
+val ActiveGreenBg: Color
+    @Composable
+    get() = MaterialTheme.colorScheme.primaryContainer
+
+val InactiveChipBg: Color
+    @Composable
+    get() = MaterialTheme.colorScheme.surfaceVariant
+
+val InactiveText: Color
+    @Composable
+    get() = MaterialTheme.colorScheme.onSurfaceVariant
 
 @Composable
 fun CategoryFilterChips(
@@ -39,6 +51,12 @@ fun CategoryFilterChips(
     onCategorySelected: (LibraryCategory) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val activeBorder = ActiveGreen
+    val activeBg = ActiveGreenBg
+    val activeText = MaterialTheme.colorScheme.onPrimaryContainer
+    val inactiveBg = InactiveChipBg
+    val inactiveText = InactiveText
+
     LazyRow(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -48,17 +66,17 @@ fun CategoryFilterChips(
             val isSelected = category == selectedCategory
 
             val backgroundColor by animateColorAsState(
-                targetValue = if (isSelected) ActiveGreenBg else InactiveChipBg,
+                targetValue = if (isSelected) activeBg else inactiveBg,
                 label = "chipBg"
             )
 
             val borderColor by animateColorAsState(
-                targetValue = if (isSelected) ActiveGreen else Color.Transparent,
+                targetValue = if (isSelected) activeBorder else Color.Transparent,
                 label = "chipBorder"
             )
 
             val textColor by animateColorAsState(
-                targetValue = if (isSelected) Color.White else InactiveText,
+                targetValue = if (isSelected) activeText else inactiveText,
                 label = "chipText"
             )
 

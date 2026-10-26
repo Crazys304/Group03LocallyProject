@@ -33,6 +33,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -70,7 +71,7 @@ fun DetailSheet(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF0F1215))
+            .background(MaterialTheme.colorScheme.background)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -95,7 +96,7 @@ fun DetailSheet(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = Color.White,
+                        tint = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -105,7 +106,7 @@ fun DetailSheet(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = title,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
@@ -113,7 +114,7 @@ fun DetailSheet(
                     )
                     Text(
                         text = subtitle,
-                        color = Color(0xFF9CA3AF),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 13.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -134,7 +135,7 @@ fun DetailSheet(
                         onClick = { onPlayAllQueue(songs, title) },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = ActiveGreen,
-                            contentColor = Color.Black
+                            contentColor = MaterialTheme.colorScheme.onPrimary
                         ),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.weight(1f)
@@ -154,12 +155,12 @@ fun DetailSheet(
                         modifier = Modifier
                             .size(42.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(if (isShuffleEnabled) ActiveGreenBg else Color(0xFF1B222B))
+                            .background(if (isShuffleEnabled) ActiveGreenBg else MaterialTheme.colorScheme.surfaceVariant)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Shuffle,
                             contentDescription = "Shuffle",
-                            tint = if (isShuffleEnabled) ActiveGreen else Color.White,
+                            tint = if (isShuffleEnabled) ActiveGreen else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -170,10 +171,10 @@ fun DetailSheet(
                         modifier = Modifier
                             .size(42.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(if (repeatMode != RepeatMode.OFF) ActiveGreenBg else Color(0xFF1B222B))
+                            .background(if (repeatMode != RepeatMode.OFF) ActiveGreenBg else MaterialTheme.colorScheme.surfaceVariant)
                     ) {
                         val icon = if (repeatMode == RepeatMode.REPEAT_ONE) Icons.Default.RepeatOne else Icons.Default.Repeat
-                        val tint = if (repeatMode != RepeatMode.OFF) ActiveGreen else Color.White
+                        val tint = if (repeatMode != RepeatMode.OFF) ActiveGreen else MaterialTheme.colorScheme.onSurfaceVariant
                         Icon(
                             imageVector = icon,
                             contentDescription = "Repeat",
@@ -212,12 +213,12 @@ fun DetailSheet(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("No tracks in this playlist yet", color = Color(0xFF9CA3AF), fontSize = 16.sp)
+                        Text("No tracks in this playlist yet", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 16.sp)
                         if (isPlaylist && onAddSongsToPlaylist != null) {
                             Spacer(modifier = Modifier.height(12.dp))
                             Button(
                                 onClick = onAddSongsToPlaylist,
-                                colors = ButtonDefaults.buttonColors(containerColor = ActiveGreen, contentColor = Color.Black)
+                                colors = ButtonDefaults.buttonColors(containerColor = ActiveGreen, contentColor = MaterialTheme.colorScheme.onPrimary)
                             ) {
                                 Text("Add Songs Now", fontWeight = FontWeight.Bold)
                             }
@@ -235,7 +236,7 @@ fun DetailSheet(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFF161B22))
+                                .background(MaterialTheme.colorScheme.surface)
                                 .clickable { onSongClick(song) }
                                 .padding(10.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -244,7 +245,7 @@ fun DetailSheet(
                                 modifier = Modifier
                                     .size(42.dp)
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(Color(0xFF222933)),
+                                    .background(MaterialTheme.colorScheme.surfaceVariant),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -260,7 +261,7 @@ fun DetailSheet(
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = song.title,
-                                    color = Color.White,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold,
                                     maxLines = 1,
@@ -268,7 +269,7 @@ fun DetailSheet(
                                 )
                                 Text(
                                     text = song.artist,
-                                    color = Color(0xFF9CA3AF),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     fontSize = 13.sp,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
@@ -277,7 +278,7 @@ fun DetailSheet(
 
                             Text(
                                 text = song.formattedDuration,
-                                color = Color(0xFF6B7280),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 12.sp,
                                 modifier = Modifier.padding(horizontal = 6.dp)
                             )
@@ -289,7 +290,7 @@ fun DetailSheet(
                                 Icon(
                                     imageVector = if (song.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                     contentDescription = "Like",
-                                    tint = if (song.isLiked) Color(0xFFEF4444) else Color(0xFF9CA3AF),
+                                    tint = if (song.isLiked) Color(0xFFEF4444) else MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
@@ -302,7 +303,7 @@ fun DetailSheet(
                                     Icon(
                                         imageVector = Icons.Default.Delete,
                                         contentDescription = "Remove from playlist",
-                                        tint = Color(0xFF9CA3AF),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.size(18.dp)
                                     )
                                 }

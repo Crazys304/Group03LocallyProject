@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.FolderSpecial
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -33,7 +34,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -156,7 +156,7 @@ fun LibraryScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF0F1215))
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             LibraryHeader(
@@ -180,7 +180,7 @@ fun LibraryScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 6.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFF1E2836))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
                         .clickable { permissionLauncher.launch(permissionToRequest) }
                         .padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -195,13 +195,13 @@ fun LibraryScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Scan Mobile Device Storage",
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = "Tap to load your local music files into Localliy",
-                            color = Color(0xFF9CA3AF),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 12.sp
                         )
                     }
@@ -299,8 +299,8 @@ fun LibraryScreen(
                     editingPlaylist = null
                     showCreateOrEditPlaylistDialog = true
                 },
-                containerColor = ActiveGreen,
-                contentColor = Color.Black,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = CircleShape,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
