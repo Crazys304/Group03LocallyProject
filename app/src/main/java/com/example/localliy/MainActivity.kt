@@ -377,10 +377,16 @@ fun MainAppScreen(
                             },
                             onPlayAllQueue = { queueSongs, queueTitle ->
                                 if (queueSongs.isNotEmpty()) {
-                                    activeQueue = queueSongs
+                                    val isSmartShuffle = queueTitle == "Smart Shuffle"
+                                    if (isSmartShuffle && !isShuffleEnabled) {
+                                        isShuffleEnabled = true
+                                    }
+                                    val finalQueue = if (isSmartShuffle) queueSongs.shuffled() else queueSongs
+                                    val startSong = if (isShuffleEnabled || isSmartShuffle) finalQueue.random() else finalQueue.first()
+                                    activeQueue = finalQueue
                                     activeQueueName = queueTitle
-                                    musicRepository.addToRecentlyPlayed(queueSongs.first(), context, queueTitle)
-                                    currentSong = if (isShuffleEnabled) queueSongs.random() else queueSongs.first()
+                                    musicRepository.addToRecentlyPlayed(startSong, context, queueTitle)
+                                    currentSong = startSong
                                     isPlaying = true
                                 }
                             }
@@ -403,10 +409,16 @@ fun MainAppScreen(
                             },
                             onPlayAllQueue = { queueSongs, queueTitle ->
                                 if (queueSongs.isNotEmpty()) {
-                                    activeQueue = queueSongs
+                                    val isSmartShuffle = queueTitle == "Smart Shuffle"
+                                    if (isSmartShuffle && !isShuffleEnabled) {
+                                        isShuffleEnabled = true
+                                    }
+                                    val finalQueue = if (isSmartShuffle) queueSongs.shuffled() else queueSongs
+                                    val startSong = if (isShuffleEnabled || isSmartShuffle) finalQueue.random() else finalQueue.first()
+                                    activeQueue = finalQueue
                                     activeQueueName = queueTitle
-                                    musicRepository.addToRecentlyPlayed(queueSongs.first(), context, queueTitle)
-                                    currentSong = if (isShuffleEnabled) queueSongs.random() else queueSongs.first()
+                                    musicRepository.addToRecentlyPlayed(startSong, context, queueTitle)
+                                    currentSong = startSong
                                     isPlaying = true
                                 }
                             },
