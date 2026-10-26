@@ -537,3 +537,13 @@ private fun PlaylistsContainer(
         }
     }
 }
+
+@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
+@Composable
+fun HomeScreenPreview() {
+    com.example.localliy.ui.theme.LocalliyTheme {
+        HomeScreen(
+            repository = remember { MusicRepository() }
+        )
+    }
+}

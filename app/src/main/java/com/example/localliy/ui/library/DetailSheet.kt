@@ -124,12 +124,13 @@ fun DetailSheet(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Action Row: Play all, Shuffle, Repeat & Add Songs
+            // Action Rows: Play all, Shuffle, Repeat & Add Songs
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+
                 if (songs.isNotEmpty()) {
                     Button(
                         onClick = { onPlayAllQueue(songs, title) },
@@ -148,6 +149,16 @@ fun DetailSheet(
                         Spacer(modifier = Modifier.width(6.dp))
                         Text("Play All (${songs.size})", fontWeight = FontWeight.Bold)
                     }
+                }
+
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
+            ) {
+                if (songs.isNotEmpty()) {
 
                     // Shuffle Toggle
                     IconButton(

@@ -18,10 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
@@ -50,12 +47,14 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.localliy.R
 import com.example.localliy.data.model.RepeatMode
 import com.example.localliy.data.model.Song
+import com.example.localliy.ui.theme.LocalliyTheme
 import java.util.Locale
 
 @Composable
@@ -71,7 +70,6 @@ fun MusicPlayerScreen(
     onSkipPrevious: () -> Unit,
     onToggleShuffle: () -> Unit,
     onToggleRepeat: () -> Unit,
-    onToggleLike: (Song) -> Unit,
     onAddToPlaylist: () -> Unit = {},
     onSeek: (Float) -> Unit = {},
     onClose: () -> Unit,
@@ -168,7 +166,7 @@ fun MusicPlayerScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(300.dp)
+                    .height(320.dp)
                     .clip(RoundedCornerShape(24.dp))
                     .background(
                         Brush.linearGradient(
@@ -199,45 +197,27 @@ fun MusicPlayerScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // --- Song Title, Artist & Like Button ---
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+            // --- Song Title & Artist (Like Button Removed) ---
+            Column(
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = currentSong.title,
-                        color = Color.White,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = currentSong.artist,
-                        color = Color(0xFF9CA3AF),
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Normal,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-
-                IconButton(
-                    onClick = { onToggleLike(currentSong) },
-                    modifier = Modifier.size(44.dp)
-                ) {
-                    Icon(
-                        imageVector = if (currentSong.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription = "Like",
-                        tint = if (currentSong.isLiked) Color(0xFFEF4444) else Color(0xFF9CA3AF),
-                        modifier = Modifier.size(26.dp)
-                    )
-                }
+                Text(
+                    text = currentSong.title,
+                    color = Color.White,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = currentSong.artist,
+                    color = Color(0xFF9CA3AF),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Normal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -355,4 +335,31 @@ private fun formatDuration(ms: Long): String {
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
     return String.format(Locale.US, "%d:%02d", minutes, seconds)
+}
+
+@Preview(showBackground = true)
+@Composable
+fun MusicPlayerScreenPreview() {
+    LocalliyTheme {
+        MusicPlayerScreen(
+            currentSong = Song(
+                id = "demo",
+                title = "Do I Wanna Know?",
+                artist = "Arctic Monkeys",
+                album = "AM",
+                durationMs = 272000L
+            ),
+            isPlaying = true,
+            queueName = "Liked Songs",
+            isShuffleEnabled = true,
+            repeatMode = RepeatMode.REPEAT_ALL,
+            progress = 0.38f,
+            onPlayPauseToggle = {},
+            onSkipNext = {},
+            onSkipPrevious = {},
+            onToggleShuffle = {},
+            onToggleRepeat = {},
+            onClose = {}
+        )
+    }
 }

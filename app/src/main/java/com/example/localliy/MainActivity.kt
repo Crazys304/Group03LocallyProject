@@ -483,14 +483,6 @@ fun MainAppScreen(
                         RepeatMode.REPEAT_ONE -> RepeatMode.OFF
                     }
                 },
-                onToggleLike = { target ->
-                    musicRepository.toggleLike(target.id, context)
-                    songsList = musicRepository.getSongs()
-                    if (currentSong?.id == target.id) {
-                        currentSong = currentSong?.copy(isLiked = !target.isLiked)
-                    }
-                    libraryRefreshTrigger++
-                },
                 onSeek = { fraction ->
                     try {
                         if (mediaPlayer != null && mediaPlayer.duration > 0) {
