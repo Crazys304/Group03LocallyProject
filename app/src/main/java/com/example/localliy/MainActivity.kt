@@ -208,8 +208,10 @@ fun MainAppScreen(
             val currentIndex = queue.indexOfFirst { it.id == song?.id }
             if (currentIndex > 0) {
                 currentSong = queue[currentIndex - 1]
-            } else {
+            } else if (repeatMode == RepeatMode.REPEAT_ALL) {
                 currentSong = queue.last()
+            } else {
+                isPlaying = false
             }
         }
     }
